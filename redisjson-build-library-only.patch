@@ -1,0 +1,13 @@
+diff --git a/modules/redisjson/src/Makefile b/modules/redisjson/src/Makefile
+index 2ff1687..2c998c7 100644
+--- a/modules/redisjson/src/Makefile
++++ b/modules/redisjson/src/Makefile
+@@ -184,7 +184,7 @@ build:
+ ifneq ($(NIGHTLY),1)
+ 	$(SHOW)set -e ;\
+ 	$(if $(RUST_FLAGS),export RUSTFLAGS="$(RUST_FLAGS)" ;,)\
+-	cargo build --all --all-targets $(CARGO_FLAGS)
++	cargo build --all $(CARGO_FLAGS)
+ else
+ 	$(SHOW)set -e ;\
+ 	$(if $(RUST_FLAGS),export RUSTFLAGS="$(RUST_FLAGS)" ;,)\
