@@ -1,7 +1,7 @@
 pkgbase = redis
 	pkgdesc = An in-memory database that persists on disk
 	pkgver = 8.10.2
-	pkgrel = 4
+	pkgrel = 5
 	url = https://redis.io/
 	install = redis.install
 	arch = x86_64
@@ -10,6 +10,7 @@ pkgbase = redis
 	makedepends = clang
 	makedepends = cmake
 	makedepends = git
+	makedepends = lld
 	makedepends = python
 	makedepends = python-pip
 	makedepends = rust
