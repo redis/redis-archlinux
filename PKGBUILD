@@ -7,16 +7,16 @@
 
 pkgname=redis
 pkgver=8.10.2
-pkgrel=2
+pkgrel=3
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64' 'aarch64')
 url='https://redis.io/'
 license=('AGPL-3.0-only')
 # RediSearch's mixed C++/Rust link loses its module init shim with Arch LTO.
 options=('!lto')
-depends=('jemalloc' 'grep' 'shadow' 'systemd-libs')
+depends=('glibc' 'libgcc' 'libstdc++' 'jemalloc' 'openssl' 'grep' 'shadow' 'systemd-libs')
 # pkg-config fails to detect systemd libraries if systemd is not installed
-makedepends=('clang' 'cmake' 'git' 'python' 'python-pip' 'rust' 'systemd' 'openssl')
+makedepends=('clang' 'cmake' 'git' 'python' 'python-pip' 'rust' 'systemd')
 backup=('etc/redis/redis.conf'
         'etc/redis/sentinel.conf')
 install=redis.install
