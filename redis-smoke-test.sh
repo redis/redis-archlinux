@@ -45,7 +45,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 "$server" --port 0 --unixsocket "$socket" --unixsocketperm 700 \
-  --dir "$workdir" --save '' --appendonly no --daemonize no \
+  --dir "$workdir" --save '' --appendonly no --daemonize no --repl-compression 1 \
   "${module_args[@]}" > "$workdir/server.log" 2>&1 &
 server_pid=$!
 
@@ -81,6 +81,10 @@ for module in bf search ReJSON timeseries; do
   grep -Fxq "$module" <<< "$modules"
 done
 
+expect OK CONFIG SET activedefrag yes
+expect $'activedefrag\nyes' CONFIG GET activedefrag
+expect OK CONFIG SET activedefrag no
+expect $'repl-compression\n1' CONFIG GET repl-compression
 expect OK JSON.SET smoke:json '$' '{"value":42}'
 expect '[42]' JSON.GET smoke:json '$.value'
 expect 1 BF.ADD smoke:bloom redis
@@ -95,7 +99,7 @@ expect 1 HSET smoke:doc:1 title redis
 for (( attempt=0; attempt<50; attempt++ )); do
   result=$(cli FT.SEARCH smoke:index redis NOCONTENT)
   if [[ "$result" == $'1\nsmoke:doc:1' ]]; then
-    printf 'PASS: module loading, JSON, Bloom, TimeSeries, and Search\n'
+    printf 'PASS: active defrag, compression, JSON, Bloom, TimeSeries, and Search\n'
     exit 0
   fi
   sleep 0.1
