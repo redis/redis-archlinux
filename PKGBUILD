@@ -26,7 +26,6 @@ source=("${pkgname}-${pkgver}.tar.gz::https://github.com/redis/redis/releases/do
         redis.sysusers
         redis.tmpfiles
         redis.conf-sane-defaults.patch
-        redisjson-build-library-only.patch
         redis-smoke-test.sh
         redis-module-flags.mk
         redis-search-linker-flags.cmake)
@@ -36,7 +35,6 @@ sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc
             '52a36e44dd0ebfbc75d4849c66fa68cedd8ab0dcdcaaf0e3ac92f1dfe9fbd538a3b98e0658c88295b4c9f61334445f887decbccee210d0b4e7c5b456485599d1'
             '149e56c5da953e61d2f3864949c38d3f36d2ab1af6c74571ae36fa9ec991dee93dcac81e3caff69ac581a5218405f3e896b5dc58b9474f997bff48f5af06ee68'
             'f45b5d20769159faeeb705e1bb9e4fdc3d74c0779b476cada829bfb49014c6ba6cd78d1d2751bf39acb6db4528281e9cab3aca684cadf687eb5fad10c7453154'
-            '65183fd80bdf525a14283197260af082b5f4938aef1bed87f65b83e3913ee434bc7808804afd75d94091d46c8bb5864a5ba0108877a05a7da73007a5a0e1ffc6'
             '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a'
             '39278366dd71821cb4be11a3b55913ae6bdb44c0a87aadab397d0002ddec4bd47e98693a3aec2525894b36eece7887440420a4a39a953bfe9a5cf3ec1c69476a'
             '63225410ee53b185fcb295240049a8fb7b00f2bcfbbd4e02577bcb2b32136b8a6b2d997bc44977ee9f382d6032d6381210f59abecbabdbdbde0c326e47bea2c0')
@@ -44,7 +42,6 @@ sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc
 prepare() {
   cd $pkgname-$pkgver
   patch -Np1 < ../redis.conf-sane-defaults.patch
-  patch -Np1 < ../redisjson-build-library-only.patch
 }
 
 build() {
@@ -73,16 +70,19 @@ check() {
 }
 
 package() {
-  export MAKEFILES="${MAKEFILES:+$MAKEFILES }$srcdir/redis-module-flags.mk"
-  export CMAKE_ARGS="${CMAKE_ARGS:+$CMAKE_ARGS }-DCMAKE_PROJECT_redisearch_INCLUDE=$srcdir/redis-search-linker-flags.cmake"
+  local binary module
   cd $pkgname-$pkgver
-  make MALLOC=jemalloc \
-       BUILD_COMPRESSION=yes \
-       PREFIX=/usr \
-       DESTDIR="$pkgdir" \
-       LTO=1 \
-       IGNORE_MISSING_DEPS=1 \
-       deploy
+  # Stage the artifacts tested by check(); deploy would invoke another build.
+  for binary in redis-server redis-cli redis-benchmark; do
+    install -Dm755 "src/$binary" "$pkgdir/usr/bin/$binary"
+  done
+  for binary in redis-sentinel redis-check-rdb redis-check-aof; do
+    ln -sf redis-server "$pkgdir/usr/bin/$binary"
+  done
+  for module in redisbloom/redisbloom.so redisearch/redisearch.so \
+                redisjson/rejson.so redistimeseries/redistimeseries.so; do
+    install -Dm755 "modules/$module" "$pkgdir/usr/lib/redis/modules/${module##*/}"
+  done
   make PREFIX=/usr/lib/redis/modules \
        ASSUME_BUILT=1 \
        sync-redis-conf
