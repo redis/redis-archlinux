@@ -7,7 +7,7 @@
 
 pkgname=redis
 pkgver=8.10.2
-pkgrel=6
+pkgrel=7
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64' 'aarch64')
 url='https://redis.io/'
@@ -27,7 +27,9 @@ source=("${pkgname}-${pkgver}.tar.gz::https://github.com/redis/redis/releases/do
         redis.tmpfiles
         redis.conf-sane-defaults.patch
         redisjson-build-library-only.patch
-        redis-smoke-test.sh)
+        redis-smoke-test.sh
+        redis-module-flags.mk
+        redis-search-linker-flags.cmake)
 sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc15a81fd0fc24c56a1c61d9c3e35aabc3cb292abd5cf034012020a3aef2cff'
             '8abf27f173a4532295dafd91b8e6e226e4376f1b2543c911e4fa60466d50523ada4dcfe520a738fd756c5725f4319153a0c0b26f6cdba234775114c72e4e7865'
             '2314c26920f5f0989fb98622f594b621a0b5035525146263da3fdfe640257118e03fc1903c15a62bcd4fbf260e0dcbf9249088292323739a607a11c9630795bf'
@@ -35,7 +37,9 @@ sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc
             '149e56c5da953e61d2f3864949c38d3f36d2ab1af6c74571ae36fa9ec991dee93dcac81e3caff69ac581a5218405f3e896b5dc58b9474f997bff48f5af06ee68'
             'f45b5d20769159faeeb705e1bb9e4fdc3d74c0779b476cada829bfb49014c6ba6cd78d1d2751bf39acb6db4528281e9cab3aca684cadf687eb5fad10c7453154'
             '65183fd80bdf525a14283197260af082b5f4938aef1bed87f65b83e3913ee434bc7808804afd75d94091d46c8bb5864a5ba0108877a05a7da73007a5a0e1ffc6'
-            '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a')
+            '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a'
+            '39278366dd71821cb4be11a3b55913ae6bdb44c0a87aadab397d0002ddec4bd47e98693a3aec2525894b36eece7887440420a4a39a953bfe9a5cf3ec1c69476a'
+            '63225410ee53b185fcb295240049a8fb7b00f2bcfbbd4e02577bcb2b32136b8a6b2d997bc44977ee9f382d6032d6381210f59abecbabdbdbde0c326e47bea2c0')
 
 prepare() {
   cd $pkgname-$pkgver
@@ -44,6 +48,8 @@ prepare() {
 }
 
 build() {
+  export MAKEFILES="${MAKEFILES:+$MAKEFILES }$srcdir/redis-module-flags.mk"
+  export CMAKE_ARGS="${CMAKE_ARGS:+$CMAKE_ARGS }-DCMAKE_PROJECT_redisearch_INCLUDE=$srcdir/redis-search-linker-flags.cmake"
   # Redis's jemalloc provides active defrag and usable-size allocation APIs.
   make MALLOC=jemalloc \
        BUILD_TLS=yes \
@@ -67,6 +73,8 @@ check() {
 }
 
 package() {
+  export MAKEFILES="${MAKEFILES:+$MAKEFILES }$srcdir/redis-module-flags.mk"
+  export CMAKE_ARGS="${CMAKE_ARGS:+$CMAKE_ARGS }-DCMAKE_PROJECT_redisearch_INCLUDE=$srcdir/redis-search-linker-flags.cmake"
   cd $pkgname-$pkgver
   make MALLOC=jemalloc \
        BUILD_COMPRESSION=yes \
