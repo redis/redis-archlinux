@@ -1,3 +1,5 @@
 d /var/lib/redis 0700 redis redis
-d /etc/redis 0755 root redis
-f /etc/redis/sentinel.conf 0664 root redis
+# Configuration rewrites need a writable parent directory.
+d /etc/redis 2770 root redis
+z /etc/redis/redis.conf 0640 redis redis
+z /etc/redis/sentinel.conf 0640 redis redis

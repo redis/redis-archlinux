@@ -9,11 +9,17 @@ Group=redis
 ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd
 TimeoutStartSec=60
 TimeoutStopSec=60
-CapabilityBoundingSet=
+# Allow Redis to raise its hard resource limits when needed.
+CapabilityBoundingSet=CAP_SYS_RESOURCE
+AmbientCapabilities=CAP_SYS_RESOURCE
 PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=full
 ProtectHome=true
+# CONFIG REWRITE creates and renames files in this directory.
+ReadWritePaths=/etc/redis/
+# Keep generated files private to Redis and its group.
+UMask=0027
 NoNewPrivileges=true
 RuntimeDirectory=redis
 RuntimeDirectoryMode=755

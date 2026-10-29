@@ -14,7 +14,10 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=full
 ProtectHome=true
+# Sentinel saves its state by rewriting its configuration.
 ReadWritePaths=/etc/redis/
+# Keep generated files private to Redis and its group.
+UMask=0027
 NoNewPrivileges=true
 RuntimeDirectory=redis
 RuntimeDirectoryMode=755

@@ -7,7 +7,7 @@
 
 pkgname=redis
 pkgver=8.10.2
-pkgrel=8
+pkgrel=9
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64' 'aarch64')
 url='https://redis.io/'
@@ -52,10 +52,10 @@ sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc
             'f0da82c545b01692e9fd30fdfb613dbb8dd9716983dcd0ff19ac2a8d36f74beb5540ef38072fdecc1e34191b3682a8542ecbf3a61ef287dbba0a2679d4e023f2'
             '21c35f4091850ea3a0cd6a24867e06e943df70d76cd5a7ec0b15a33e0e9e0cc3584ed7930e1ac6f347e7e06f0e002d0e759884eaf05310014e24ea0e0419fcc4'
             '6ab2de83b7fc44de40e58a47c28a9507bf7c50fa9b08925b5a6d48958868a86e6790aff684d29ceb50ad18905e3832840719e1b7bfec3b8a0c00b15bb0f70f38'
-            '8abf27f173a4532295dafd91b8e6e226e4376f1b2543c911e4fa60466d50523ada4dcfe520a738fd756c5725f4319153a0c0b26f6cdba234775114c72e4e7865'
-            '2314c26920f5f0989fb98622f594b621a0b5035525146263da3fdfe640257118e03fc1903c15a62bcd4fbf260e0dcbf9249088292323739a607a11c9630795bf'
+            'c11b220653cc3f4908709e9904fb4e0124aaa1376e57de4e30da447a476e22fe5e49b2bfc3ce6afd7e7f942fcc9ea16c2f93d15d17046f2b5f4b16c51e236234'
+            'fd1cb56cf91100c2868f17445f330c295a704756445ea59b1c4d5632e8156fa19ab01024c72a71a4f1671be7c7db0d50455f629e118d835dbc57d0be8395359f'
             '52a36e44dd0ebfbc75d4849c66fa68cedd8ab0dcdcaaf0e3ac92f1dfe9fbd538a3b98e0658c88295b4c9f61334445f887decbccee210d0b4e7c5b456485599d1'
-            '149e56c5da953e61d2f3864949c38d3f36d2ab1af6c74571ae36fa9ec991dee93dcac81e3caff69ac581a5218405f3e896b5dc58b9474f997bff48f5af06ee68'
+            '1dccce3fb9c90f8bb5f7e9dab3937a58820e8094694e13b6b5e2ca97cad01d3156c0e8647bc4e2e0a3f28cfd59e8825d9e5ccfffcd78e12451cbbb6d46981777'
             'f45b5d20769159faeeb705e1bb9e4fdc3d74c0779b476cada829bfb49014c6ba6cd78d1d2751bf39acb6db4528281e9cab3aca684cadf687eb5fad10c7453154'
             '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a'
             '39278366dd71821cb4be11a3b55913ae6bdb44c0a87aadab397d0002ddec4bd47e98693a3aec2525894b36eece7887440420a4a39a953bfe9a5cf3ec1c69476a'
@@ -134,8 +134,8 @@ package() {
 
   install -Dm644 LICENSE.txt "$pkgdir"/usr/share/licenses/redis/LICENSE
   install -Dm644 deps/jemalloc/COPYING "$pkgdir"/usr/share/licenses/redis/jemalloc-COPYING
-  install -Dm644 redis-full.conf "$pkgdir"/etc/redis/redis.conf
-  install -Dm644 sentinel.conf "$pkgdir"/etc/redis/sentinel.conf
+  install -Dm640 redis-full.conf "$pkgdir"/etc/redis/redis.conf
+  install -Dm640 sentinel.conf "$pkgdir"/etc/redis/sentinel.conf
   install -Dm644 -t "$pkgdir"/usr/lib/systemd/system/ ../redis.service ../redis-sentinel.service
   install -Dm644 "$srcdir"/redis.sysusers "$pkgdir"/usr/lib/sysusers.d/redis.conf
   install -Dm644 "$srcdir"/redis.tmpfiles "$pkgdir"/usr/lib/tmpfiles.d/redis.conf
