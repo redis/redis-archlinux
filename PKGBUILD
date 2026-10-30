@@ -6,17 +6,18 @@
 # Contributor: nofxx <x@<nick>.com>
 
 pkgname=redis
-pkgver=8.10.2
-pkgrel=10
+pkgver=8.12rc1
+pkgrel=2
+_tag=${pkgver/rc/-rc}
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64')
 url='https://redis.io/'
-license=('AGPL-3.0-only' 'BSD-2-Clause')
+license=('AGPL-3.0-only' 'BSD-2-Clause' 'MIT')
 # Let upstream coordinate C/C++ and Rust LTO instead of injecting makepkg flags.
 options=('!lto')
 depends=('glibc' 'libgcc' 'libstdc++' 'openssl' 'zstd' 'grep' 'shadow' 'systemd-libs')
 # pkg-config fails to detect systemd libraries if systemd is not installed
-makedepends=('clang' 'cmake' 'git' 'lld' 'python' 'python-pip' 'rust' 'systemd')
+makedepends=('clang' 'cmake' 'git' 'lld' 'python' 'rust' 'systemd')
 backup=('etc/redis/redis.conf'
         'etc/redis/sentinel.conf')
 install=redis.install
@@ -27,7 +28,7 @@ _robinmapver=1.4.0
 _fmtver=12.1.0
 _spdlogver=1.15.3
 _tomlplusplusver=3.3.0
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/redis/redis/releases/download/${pkgver}/redis-full.tar.gz"
+source=("https://github.com/redis/redis/releases/download/${_tag}/redis-full-${_tag}.tar.gz"
         "boost-${_boostver}.tar.gz::https://github.com/boostorg/boost/releases/download/boost-${_boostver}/boost-${_boostver}-b2-nodocs.tar.gz"
         "cpu_features-${_cpu_featuresver}.tar.gz::https://github.com/google/cpu_features/archive/refs/tags/v${_cpu_featuresver}.tar.gz"
         "eve-${_evever}.tar.gz::https://github.com/jfalcou/eve/archive/refs/tags/v${_evever}.tar.gz"
@@ -43,8 +44,9 @@ source=("${pkgname}-${pkgver}.tar.gz::https://github.com/redis/redis/releases/do
         redis-smoke-test.sh
         redis-module-flags.mk
         redis-search-linker-flags.cmake
-        redis-cargo-frozen)
-sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc15a81fd0fc24c56a1c61d9c3e35aabc3cb292abd5cf034012020a3aef2cff'
+        redis-cargo-frozen
+        'svs-gcc16-mutex.patch::https://github.com/intel/ScalableVectorSearch/commit/87251338cdc792dc2f1e6f2a58164e7a27f70b6b.patch')
+sha512sums=('2914fc45a217682543671ce08986f6c74e67eb947e0d5ca3ce4dcbca8246bb4e5a84491a73cd345c9ab9e3530a6e47b74dfd78989320b2f48939989e65195d2c'
             'c5e6bd31e6fe9ee7c97d833b9d35fad3dfa3bddb424c8f4b35e1c79c6d3ad231da667ee9c753df789621f5c8b2665816916368d6e95c446fa970a46a2c3cb994'
             '40c314c584fcf109d9a641c055cb75f335fd5425dd336fe831828b956226eaf0ac2fd8ffceeaf10e02afa9cec01cb0ddc6af8ff78f20dd925783e6958d0b9304'
             '20b55996465fa5016d43cee95541510b6470b2358635b0e269965d3fb43731e83b92bc2df0502fcdfadd31de47f877f22b1c6ae84638f1f3db92c70315cc1b29'
@@ -60,16 +62,20 @@ sha512sums=('e06f570b741bec9e1b34e65a211c2c59bc1d4220b6d2ef06fc00c0e99bdec29a0bc
             '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a'
             '39278366dd71821cb4be11a3b55913ae6bdb44c0a87aadab397d0002ddec4bd47e98693a3aec2525894b36eece7887440420a4a39a953bfe9a5cf3ec1c69476a'
             '63225410ee53b185fcb295240049a8fb7b00f2bcfbbd4e02577bcb2b32136b8a6b2d997bc44977ee9f382d6032d6381210f59abecbabdbdbde0c326e47bea2c0'
-            'a14c884985542b876f715fc1ef1b6d1fff103d8979c0ccff2f523f48677f6d23594b43d5f88a571351dc5eaeefa3a3fc9be3fc48898be57a2160b82250b47bbc')
+            'a14c884985542b876f715fc1ef1b6d1fff103d8979c0ccff2f523f48677f6d23594b43d5f88a571351dc5eaeefa3a3fc9be3fc48898be57a2160b82250b47bbc'
+            '807f1c5f8a0a5b45616382a2748fb9bd082eb25a9c229ce2f41f66bd574cd11549cc17487c8236c40a70970a20809a855b7f9b5954166052442d9f654d7949a0')
 
 prepare() {
   local workspace
   export CARGO_HOME="$srcdir/cargo-home"
   install -Dm755 "$srcdir/redis-cargo-frozen" "$srcdir/redis-build-tools/cargo"
+  # Fix GCC 16 builds until bundled SVS includes upstream #397.
+  patch -Np1 -d "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch" < \
+    "$srcdir/svs-gcc16-mutex.patch"
   # Local FetchContent overrides bypass upstream's dependency patch step.
   patch -Np1 -d "$srcdir/tomlplusplus-$_tomlplusplusver" < \
-    "$srcdir/$pkgname-$pkgver/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch/cmake/patches/tomlplusplus_v330.patch"
-  cd $pkgname-$pkgver
+    "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch/cmake/patches/tomlplusplus_v330.patch"
+  cd "$pkgname-$_tag"
   patch -Np1 < ../redis.conf-sane-defaults.patch
   for workspace in modules/redisjson/src modules/redisearch/src/src/redisearch_rs; do
     (cd "$workspace" && /usr/bin/cargo fetch --locked --target host-tuple)
@@ -100,11 +106,11 @@ build() {
        LTO=1 \
        IGNORE_MISSING_DEPS=1 \
        build \
-       -C $pkgname-$pkgver
+       -C "$pkgname-$_tag"
 }
 
 check() {
-  cd $pkgname-$pkgver
+  cd "$pkgname-$_tag"
   bash "$srcdir/redis-smoke-test.sh" \
        "$PWD/src/redis-server" \
        "$PWD/src/redis-cli" \
@@ -116,7 +122,7 @@ check() {
 
 package() {
   local binary module
-  cd $pkgname-$pkgver
+  cd "$pkgname-$_tag"
   # Stage the artifacts tested by check(); deploy would invoke another build.
   for binary in redis-server redis-cli redis-benchmark; do
     install -Dm755 "src/$binary" "$pkgdir/usr/bin/$binary"
@@ -140,6 +146,7 @@ package() {
 
   install -Dm644 LICENSE.txt "$pkgdir"/usr/share/licenses/redis/LICENSE
   install -Dm644 deps/jemalloc/COPYING "$pkgdir"/usr/share/licenses/redis/jemalloc-COPYING
+  install -Dm644 deps/croaring/LICENSE "$pkgdir"/usr/share/licenses/redis/croaring-LICENSE
   install -Dm640 redis-full.conf "$pkgdir"/etc/redis/redis.conf
   install -Dm640 sentinel.conf "$pkgdir"/etc/redis/sentinel.conf
   install -Dm644 -t "$pkgdir"/usr/lib/systemd/system/ ../redis.service ../redis-sentinel.service
