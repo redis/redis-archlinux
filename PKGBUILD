@@ -9,7 +9,7 @@ pkgname=redis
 pkgver=8.10.2
 pkgrel=10
 pkgdesc='An in-memory database that persists on disk'
-arch=('x86_64' 'aarch64')
+arch=('x86_64')
 url='https://redis.io/'
 license=('AGPL-3.0-only' 'BSD-2-Clause')
 # Let upstream coordinate C/C++ and Rust LTO instead of injecting makepkg flags.
@@ -115,12 +115,7 @@ check() {
 }
 
 package() {
-  local binary module module_arch
-  case "$CARCH" in
-    x86_64) module_arch=x64 ;;
-    aarch64) module_arch=arm64v8 ;;
-    *) return 1 ;;
-  esac
+  local binary module
   cd $pkgname-$pkgver
   # Stage the artifacts tested by check(); deploy would invoke another build.
   for binary in redis-server redis-cli redis-benchmark; do
@@ -135,9 +130,9 @@ package() {
   # Upstream strips the staged Search/JSON libraries.
   # Search's .debug is a full ELF; Cargo keeps JSON's unstripped library.
   # Let makepkg split their debug information.
-  install -Dm755 "modules/redisearch/src/bin/linux-$module_arch-release/search-community/redisearch.so.debug" \
+  install -Dm755 "modules/redisearch/src/bin/linux-x64-release/search-community/redisearch.so.debug" \
     "$pkgdir/usr/lib/redis/modules/redisearch.so"
-  install -Dm755 "modules/redisjson/src/bin/linux-$module_arch-release/target/release/librejson.so" \
+  install -Dm755 "modules/redisjson/src/bin/linux-x64-release/target/release/librejson.so" \
     "$pkgdir/usr/lib/redis/modules/rejson.so"
   make PREFIX=/usr/lib/redis/modules \
        ASSUME_BUILT=1 \
