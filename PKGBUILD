@@ -6,8 +6,8 @@
 # Contributor: nofxx <x@<nick>.com>
 
 pkgname=redis
-pkgver=8.12rc1
-pkgrel=2
+pkgver=8.12rc2
+pkgrel=1
 _tag=${pkgver/rc/-rc}
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64')
@@ -46,7 +46,7 @@ source=("https://github.com/redis/redis/releases/download/${_tag}/redis-full-${_
         redis-search-linker-flags.cmake
         redis-cargo-frozen
         'svs-gcc16-mutex.patch::https://github.com/intel/ScalableVectorSearch/commit/87251338cdc792dc2f1e6f2a58164e7a27f70b6b.patch')
-sha512sums=('2914fc45a217682543671ce08986f6c74e67eb947e0d5ca3ce4dcbca8246bb4e5a84491a73cd345c9ab9e3530a6e47b74dfd78989320b2f48939989e65195d2c'
+sha512sums=('f79f0b8932599327ee1d88d9db0e4b53b870e36b8f42cd003843fcc14fadae12af3f612be89d81c8abc8d6bcb11d9d83b32a30308642c5eb72a7c70c1e3e90b9'
             'c5e6bd31e6fe9ee7c97d833b9d35fad3dfa3bddb424c8f4b35e1c79c6d3ad231da667ee9c753df789621f5c8b2665816916368d6e95c446fa970a46a2c3cb994'
             '40c314c584fcf109d9a641c055cb75f335fd5425dd336fe831828b956226eaf0ac2fd8ffceeaf10e02afa9cec01cb0ddc6af8ff78f20dd925783e6958d0b9304'
             '20b55996465fa5016d43cee95541510b6470b2358635b0e269965d3fb43731e83b92bc2df0502fcdfadd31de47f877f22b1c6ae84638f1f3db92c70315cc1b29'
