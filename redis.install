@@ -1,7 +1,25 @@
-post_upgrade() {
-  if (( $(vercmp $2 6.2.1-2) < 0 )); then
+_warn_valkey_alias() {
+  local unit=/etc/systemd/system/redis.service
+  if [[ -L $unit && ! -e $unit ]] &&
+     [[ $(readlink "$unit") == /usr/lib/systemd/system/valkey.service ]]; then
     echo ""
-    echo "Note: The redis config has been moved from /etc/redis.conf to /etc/redis/redis.conf"
+    echo "A stale Valkey alias hides redis.service."
+    echo "Run: systemctl disable valkey.service"
+    echo "Then: systemctl daemon-reload"
+    echo ""
+  fi
+}
+
+post_install() {
+  _warn_valkey_alias
+}
+
+post_upgrade() {
+  _warn_valkey_alias
+  if (( $(vercmp "$2" 8.12rc2-3) < 0 )); then
+    echo ""
+    echo "redis.service now loads bundled modules through /usr/lib/redis/modules.conf."
+    echo "In case of duplicate loadmodule errors, remove those directives from redis.conf"
     echo ""
   fi
 }

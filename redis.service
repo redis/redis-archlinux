@@ -6,7 +6,8 @@ After=network.target
 Type=notify
 User=redis
 Group=redis
-ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd
+Environment="REDIS_MODULES_ARG=--include /usr/lib/redis/modules.conf"
+ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd --config-rewrite-source-aware yes $REDIS_MODULES_ARG
 TimeoutStartSec=60
 TimeoutStopSec=60
 # Allow Redis to raise its hard resource limits when needed.

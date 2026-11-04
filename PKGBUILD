@@ -7,7 +7,7 @@
 
 pkgname=redis
 pkgver=8.12rc2
-pkgrel=2
+pkgrel=3
 _tag=${pkgver/rc/-rc}
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64')
@@ -37,6 +37,7 @@ source=("https://github.com/redis/redis/releases/download/${_tag}/redis-full-${_
         "spdlog-${_spdlogver}.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v${_spdlogver}.tar.gz"
         "tomlplusplus-${_tomlplusplusver}.tar.gz::https://github.com/marzer/tomlplusplus/archive/refs/tags/v${_tomlplusplusver}.tar.gz"
         redis.service
+        redis-modules.conf
         redis-sentinel.service
         redis.sysusers
         redis.tmpfiles
@@ -54,7 +55,8 @@ sha512sums=('f79f0b8932599327ee1d88d9db0e4b53b870e36b8f42cd003843fcc14fadae12af3
             'f0da82c545b01692e9fd30fdfb613dbb8dd9716983dcd0ff19ac2a8d36f74beb5540ef38072fdecc1e34191b3682a8542ecbf3a61ef287dbba0a2679d4e023f2'
             '21c35f4091850ea3a0cd6a24867e06e943df70d76cd5a7ec0b15a33e0e9e0cc3584ed7930e1ac6f347e7e06f0e002d0e759884eaf05310014e24ea0e0419fcc4'
             '6ab2de83b7fc44de40e58a47c28a9507bf7c50fa9b08925b5a6d48958868a86e6790aff684d29ceb50ad18905e3832840719e1b7bfec3b8a0c00b15bb0f70f38'
-            'c11b220653cc3f4908709e9904fb4e0124aaa1376e57de4e30da447a476e22fe5e49b2bfc3ce6afd7e7f942fcc9ea16c2f93d15d17046f2b5f4b16c51e236234'
+            '2a48310f9814f9b74b2f70cf6dba19b2ca32434bcfbc54745faac0371bb3d74e2b46d7d02965355de4d68c49b576cc6ee55791668e58b68802fc04db4d6b1ac4'
+            '0431b93f8f610ef9b9c12bf708039de86acb2eed24096c8f25f056db6a54471700b26cf086a47d4ffc66341edd3d187c7711c59adbb6ad9617b922a2abd4d598'
             'fd1cb56cf91100c2868f17445f330c295a704756445ea59b1c4d5632e8156fa19ab01024c72a71a4f1671be7c7db0d50455f629e118d835dbc57d0be8395359f'
             '52a36e44dd0ebfbc75d4849c66fa68cedd8ab0dcdcaaf0e3ac92f1dfe9fbd538a3b98e0658c88295b4c9f61334445f887decbccee210d0b4e7c5b456485599d1'
             '1dccce3fb9c90f8bb5f7e9dab3937a58820e8094694e13b6b5e2ca97cad01d3156c0e8647bc4e2e0a3f28cfd59e8825d9e5ccfffcd78e12451cbbb6d46981777'
@@ -143,6 +145,9 @@ package() {
   make PREFIX=/usr/lib/redis/modules \
        ASSUME_BUILT=1 \
        sync-redis-conf
+  # The service loads vendor modules separately; keep their configuration documentation.
+  sed -i '/^[[:space:]]*loadmodule[[:space:]]/d' redis-full.conf
+  install -Dm644 "$srcdir/redis-modules.conf" "$pkgdir/usr/lib/redis/modules.conf"
 
   install -Dm644 LICENSE.txt "$pkgdir"/usr/share/licenses/redis/LICENSE
   install -Dm644 -t "$pkgdir/usr/share/licenses/redis" \
