@@ -7,12 +7,12 @@
 
 pkgname=redis
 pkgver=8.12rc2
-pkgrel=1
+pkgrel=2
 _tag=${pkgver/rc/-rc}
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64')
 url='https://redis.io/'
-license=('AGPL-3.0-only' 'BSD-2-Clause' 'MIT')
+license=('AGPL-3.0-only' 'BSD-2-Clause' 'BSD-3-Clause' 'MIT' 'BSL-1.0' 'Apache-2.0')
 # Let upstream coordinate C/C++ and Rust LTO instead of injecting makepkg flags.
 options=('!lto')
 depends=('glibc' 'libgcc' 'libstdc++' 'openssl' 'zstd' 'grep' 'shadow' 'systemd-libs')
@@ -121,7 +121,7 @@ check() {
 }
 
 package() {
-  local binary module
+  local binary module notice component
   cd "$pkgname-$_tag"
   # Stage the artifacts tested by check(); deploy would invoke another build.
   for binary in redis-server redis-cli redis-benchmark; do
@@ -145,8 +145,29 @@ package() {
        sync-redis-conf
 
   install -Dm644 LICENSE.txt "$pkgdir"/usr/share/licenses/redis/LICENSE
-  install -Dm644 deps/jemalloc/COPYING "$pkgdir"/usr/share/licenses/redis/jemalloc-COPYING
-  install -Dm644 deps/croaring/LICENSE "$pkgdir"/usr/share/licenses/redis/croaring-LICENSE
+  install -Dm644 -t "$pkgdir/usr/share/licenses/redis" \
+    REDISCONTRIBUTIONS.txt modules/redisearch/src/THIRD_PARTY_NOTICES.md
+  for notice in \
+      lua:deps/lua/COPYRIGHT \
+      jemalloc:deps/jemalloc/COPYING \
+      hdr_histogram:deps/hdr_histogram/LICENSE.txt \
+      tre:deps/tre/LICENSE \
+      xxhash:deps/xxhash/LICENSE \
+      hiredis:deps/hiredis/COPYING \
+      t-digest-c:modules/redisbloom/src/deps/t-digest-c/LICENSE.md \
+      libuv:modules/redisearch/src/deps/libuv/LICENSE \
+      libnu:modules/redisearch/src/deps/libnu/LICENSE \
+      miniz:modules/redisearch/src/deps/miniz/LICENSE \
+      snowball:modules/redisearch/src/deps/snowball/COPYING \
+      libevent:modules/redistimeseries/src/deps/LibMR/deps/libevent/LICENSE \
+      "fmt:$srcdir/fmt-$_fmtver/LICENSE" \
+      "spdlog:$srcdir/spdlog-$_spdlogver/LICENSE" \
+      "tomlplusplus:$srcdir/tomlplusplus-$_tomlplusplusver/LICENSE" \
+      "robin-map:$srcdir/robin-map-$_robinmapver/LICENSE"; do
+    component=${notice%%:*}
+    notice=${notice#*:}
+    install -Dm644 "$notice" "$pkgdir/usr/share/licenses/redis/$component/${notice##*/}"
+  done
   install -Dm640 redis-full.conf "$pkgdir"/etc/redis/redis.conf
   install -Dm640 sentinel.conf "$pkgdir"/etc/redis/sentinel.conf
   install -Dm644 -t "$pkgdir"/usr/lib/systemd/system/ ../redis.service ../redis-sentinel.service
