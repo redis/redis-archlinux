@@ -15,7 +15,7 @@ url='https://redis.io/'
 license=('AGPL-3.0-only' 'BSD-2-Clause' 'BSD-3-Clause' 'MIT' 'BSL-1.0' 'Apache-2.0')
 # Let upstream coordinate C/C++ and Rust LTO instead of injecting makepkg flags.
 options=('!lto')
-depends=('glibc' 'libgcc' 'libstdc++' 'openssl' 'zstd' 'grep' 'shadow' 'systemd-libs')
+depends=('glibc' 'libgcc' 'libstdc++' 'openssl' 'zstd' 'systemd-libs')
 # pkg-config fails to detect systemd libraries if systemd is not installed
 makedepends=('clang' 'cmake' 'git' 'lld' 'python' 'rust' 'systemd')
 backup=('etc/redis/redis.conf'
