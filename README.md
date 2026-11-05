@@ -24,7 +24,7 @@ The bundled jemalloc is used because it carries modifications Redis relies on (a
 
 
 ## Offline build
-prepare() and build() are separated so that the build runs without network access. For this, cargo dependencies are fetched with `--locked` and built through a `cargo --frozen` wrapper, and several search dependencies that CMake would otherwise download are declared as sources.
+prepare() and build() are separated so that the build runs without network access. For this, cargo dependencies are fetched with `--locked` and built through a `cargo --frozen` wrapper, and several search dependencies that CMake would otherwise download are declared as sources. Validated by running `makepkg -os` followed by `makepkg -e` with sealed network.
 
 ## Debug symbols
 Search and json strips debug info, so I have to use unstripped objects to delegate it to makepkg.
@@ -36,7 +36,7 @@ The license array lists SPDX identifiers that cover the shipped code, the origin
 ## Module loading
 Module loading is implemented with a `modules.conf` passed in `ExecStart`. This allows seamless upgrades when `redis.conf` has been modified and better reflects the fact that the modules are vendored in by default.
 Passing it through an environment variable in `ExecStart` allows opting out by overriding the variable in a systemd drop-in.
-In addition new `--config-rewrite-source-aware` option is used to avoid duplicating configuration when `CONFIG REWRITE` is used.
+In addition new `--config-rewrite-source-aware yes` option is used to avoid duplicating configuration when `CONFIG REWRITE` is used.
 
 ## `/etc/redis` Permissions
 `/etc/redis` is made writable by the service user so that `CONFIG REWRITE` works correctly.
