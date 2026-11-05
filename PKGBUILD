@@ -13,11 +13,12 @@ pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64')
 url='https://redis.io/'
 license=('AGPL-3.0-only' 'BSD-2-Clause' 'BSD-3-Clause' 'MIT' 'BSL-1.0' 'Apache-2.0')
-# Let upstream coordinate C/C++ and Rust LTO instead of injecting makepkg flags.
+# Let upstream coordinate C/C++ and Rust LTO instead of injecting makepkg flags
 options=('!lto')
 depends=('glibc' 'libgcc' 'libstdc++' 'openssl' 'zstd' 'systemd-libs')
 # pkg-config fails to detect systemd libraries if systemd is not installed
-makedepends=('clang' 'cmake' 'git' 'lld' 'python' 'rust' 'systemd')
+# TimeSeries's readies interpreter check also requires pip
+makedepends=('clang' 'cmake' 'git' 'lld' 'python' 'python-pip' 'rust' 'systemd')
 backup=('etc/redis/redis.conf'
         'etc/redis/sentinel.conf')
 install=redis.install
@@ -62,7 +63,7 @@ sha512sums=('f79f0b8932599327ee1d88d9db0e4b53b870e36b8f42cd003843fcc14fadae12af3
             '1dccce3fb9c90f8bb5f7e9dab3937a58820e8094694e13b6b5e2ca97cad01d3156c0e8647bc4e2e0a3f28cfd59e8825d9e5ccfffcd78e12451cbbb6d46981777'
             'f45b5d20769159faeeb705e1bb9e4fdc3d74c0779b476cada829bfb49014c6ba6cd78d1d2751bf39acb6db4528281e9cab3aca684cadf687eb5fad10c7453154'
             '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a'
-            '39278366dd71821cb4be11a3b55913ae6bdb44c0a87aadab397d0002ddec4bd47e98693a3aec2525894b36eece7887440420a4a39a953bfe9a5cf3ec1c69476a'
+            '12bb0c6077f0cf0ca32402c0cd627e19e916c137d87a0f8897f8718d195b6087afbb948a61dd5508e8fb10ac7ae3f8d4ccf50b3aca71696723bdbc2cddc95037'
             '63225410ee53b185fcb295240049a8fb7b00f2bcfbbd4e02577bcb2b32136b8a6b2d997bc44977ee9f382d6032d6381210f59abecbabdbdbde0c326e47bea2c0'
             'a14c884985542b876f715fc1ef1b6d1fff103d8979c0ccff2f523f48677f6d23594b43d5f88a571351dc5eaeefa3a3fc9be3fc48898be57a2160b82250b47bbc'
             '807f1c5f8a0a5b45616382a2748fb9bd082eb25a9c229ce2f41f66bd574cd11549cc17487c8236c40a70970a20809a855b7f9b5954166052442d9f654d7949a0')
@@ -71,14 +72,15 @@ prepare() {
   local workspace
   export CARGO_HOME="$srcdir/cargo-home"
   install -Dm755 "$srcdir/redis-cargo-frozen" "$srcdir/redis-build-tools/cargo"
-  # Fix GCC 16 builds until bundled SVS includes upstream #397.
+  # Fix GCC 16 builds until bundled SVS includes upstream #397 (should be fixed in 8.12-rc3)
   patch -Np1 -d "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch" < \
     "$srcdir/svs-gcc16-mutex.patch"
-  # Local FetchContent overrides bypass upstream's dependency patch step.
+  # Local FetchContent overrides bypass upstream's dependency patch step
   patch -Np1 -d "$srcdir/tomlplusplus-$_tomlplusplusver" < \
     "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch/cmake/patches/tomlplusplus_v330.patch"
   cd "$pkgname-$_tag"
   patch -Np1 < ../redis.conf-sane-defaults.patch
+  # Fetch locked Rust dependencies now so build() can run offline
   for workspace in modules/redisjson/src modules/redisearch/src/src/redisearch_rs; do
     (cd "$workspace" && /usr/bin/cargo fetch --locked --target host-tuple)
   done
@@ -87,9 +89,14 @@ prepare() {
 build() {
   export CARGO_HOME="$srcdir/cargo-home"
   export CARGO_NET_OFFLINE=true
+  # Use a Cargo wrapper with --frozen to prevent lockfile updates and network access
   export CARGO="$srcdir/redis-build-tools/cargo"
   export PATH="$srcdir/redis-build-tools:$PATH"
+  # Bloom and TimeSeries's readies rules do not consistently use standard build flags
+  # Use MAKEFILES to append them to readies variables in recursive builds
   export MAKEFILES="${MAKEFILES:+$MAKEFILES }$srcdir/redis-module-flags.mk"
+  # Search's explicit LTO linker settings otherwise omit Arch's LDFLAGS
+  # Use a CMake project hook to append them after initialization.
   export CMAKE_ARGS="${CMAKE_ARGS:+$CMAKE_ARGS }-DCMAKE_PROJECT_redisearch_INCLUDE=$srcdir/redis-search-linker-flags.cmake \
     -DCARGO_EXECUTABLE=$CARGO \
     -DBOOST_DIR=$srcdir/boost-$_boostver \
@@ -125,7 +132,7 @@ check() {
 package() {
   local binary module notice component
   cd "$pkgname-$_tag"
-  # Stage the artifacts tested by check(); deploy would invoke another build.
+  # Stage the artifacts tested by check() explicitly, using make deploy would invoke another build
   for binary in redis-server redis-cli redis-benchmark; do
     install -Dm755 "src/$binary" "$pkgdir/usr/bin/$binary"
   done
@@ -135,9 +142,8 @@ package() {
   for module in redisbloom/redisbloom.so redistimeseries/redistimeseries.so; do
     install -Dm755 "modules/$module" "$pkgdir/usr/lib/redis/modules/${module##*/}"
   done
-  # Upstream strips the staged Search/JSON libraries.
-  # Search's .debug is a full ELF; Cargo keeps JSON's unstripped library.
-  # Let makepkg split their debug information.
+  # search and json module strips libraries, but makepkg needs unstripped ones
+  # use search's .debug and cargo's unstripped JSON library so makepkg can split debug info
   install -Dm755 "modules/redisearch/src/bin/linux-x64-release/search-community/redisearch.so.debug" \
     "$pkgdir/usr/lib/redis/modules/redisearch.so"
   install -Dm755 "modules/redisjson/src/bin/linux-x64-release/target/release/librejson.so" \
@@ -145,7 +151,7 @@ package() {
   make PREFIX=/usr/lib/redis/modules \
        ASSUME_BUILT=1 \
        sync-redis-conf
-  # The service loads vendor modules separately; keep their configuration documentation.
+  # Remove loadmodule from main conf, we serve modules using modules.conf
   sed -i '/^[[:space:]]*loadmodule[[:space:]]/d' redis-full.conf
   install -Dm644 "$srcdir/redis-modules.conf" "$pkgdir/usr/lib/redis/modules.conf"
 

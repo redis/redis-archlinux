@@ -2,7 +2,7 @@ version = 1
 
 [[annotations]]
 path = [
-    "PKGBUILD", ".SRCINFO", ".nvchecker.toml", "REUSE.toml",
+    "PKGBUILD", ".SRCINFO", ".nvchecker.toml", "REUSE.toml", "README.md",
     "redis.install", "redis.service", "redis-sentinel.service", "redis-modules.conf",
     "redis.sysusers", "redis.tmpfiles", "redis-smoke-test.sh",
     "redis-cargo-frozen", "redis-module-flags.mk",
