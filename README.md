@@ -54,3 +54,6 @@ More effort should go into licensing: all used dependencies should be covered, i
 
 ## Better support for offline builds
 Ideally there would be a tool that prepares an offline build, or a `make` flag indicating that everything is already available offline.
+
+## man pages
+Man pages are completely missing in upstream distribution. This needs to be addressed.
