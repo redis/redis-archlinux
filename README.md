@@ -41,6 +41,9 @@ In addition new `--config-rewrite-source-aware yes` option is used to avoid dupl
 ## `/etc/redis` Permissions
 `/etc/redis` is made writable by the service user so that `CONFIG REWRITE` works correctly.
 
+## PidFile
+pidfile is supressed in the unit configuration, since redis is managed by systemd and there is no need of pidfile, in addition default pidfile from the upstream config uses non-writable directory anyway
+
 # Lessons and what could be simplified upstream
 
 ## A standard way to accept the build system's compiler and linker flags
