@@ -1,0 +1,17 @@
+name: "Run smoke tests"
+description: "Installs the built package in a fresh Arch Linux container and runs the smoke test"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download package artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: arch-x86_64
+        path: ./arch-x86_64
+
+    - name: Run smoke tests
+      shell: bash
+      run: |
+        docker run --rm -v "$PWD:/work" -w /work archlinux:base \
+          .github/actions/run-smoke-tests/run-smoke-tests.sh ./arch-x86_64

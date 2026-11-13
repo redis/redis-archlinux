@@ -1,0 +1,50 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: 'Release tag to build, empty builds the PKGBUILD as committed'
+        type: string
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Ensure Release Branch
+        if: inputs.release_tag != ''
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ inputs.release_tag }}
+          release_branch: ${{ github.ref_name }}
+          allow_modify: false
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          release_version_branch_prefix: automation/
+
+      - name: Build package
+        uses: ./.github/actions/build
+
+  run-smoke-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Ensure Release Branch
+        if: inputs.release_tag != ''
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ inputs.release_tag }}
+          release_branch: ${{ github.ref_name }}
+          allow_modify: false
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          release_version_branch_prefix: automation/
+
+      - name: Run smoke tests
+        uses: ./.github/actions/run-smoke-tests
