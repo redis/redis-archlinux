@@ -1,0 +1,152 @@
+name: Release Build and Test
+
+# This workflow is part of the Redis OSS release automation process.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to build'
+        required: true
+      workflow_uuid:
+        description: 'Optional UUID to identify this workflow run'
+        required: false
+      release_type:
+        description: 'Type of release to upload (public, internal)'
+        required: true
+      slack_channel_id:
+        description: 'Slack channel ID to post notifications to'
+        required: false
+        type: string
+        default: ''
+      slack_thread_ts:
+        description: 'Thread timestamp to post message as a reply (optional)'
+        required: false
+        type: string
+        default: ''
+
+# UUID is used to help automation to identify workflow run in the list of workflow runs.
+run-name: "Release Build and Test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
+
+jobs:
+  prepare-release:
+    runs-on: ["ubuntu-latest"]
+    outputs:
+      env_name: ${{ steps.validate-inputs.outputs.env_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate inputs
+        id: validate-inputs
+        uses: ./.github/actions/release-channel
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+          release_type: ${{ github.event.inputs.release_type }}
+
+      - name: Validate Redis Release Archive
+        uses: redis-developer/redis-oss-release-automation/.github/actions/validate-redis-release-archive@main
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+
+      - name: Ensure Release Branch
+        id: ensure-branch
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+          release_branch: ${{ github.ref_name }}
+          allow_modify: true
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          release_version_branch_prefix: automation/
+
+      - name: Update Redis version
+        uses: ./.github/actions/update-redis-version
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+          release_version_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}
+
+  build-n-test:
+    needs: prepare-release
+    uses: ./.github/workflows/build-n-test.yml
+    with:
+      release_tag: ${{ github.event.inputs.release_tag }}
+
+  create-release-handle:
+    needs: build-n-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release Handle
+        shell: bash
+        run: |
+          cat <<RELEASE_HANDLE >result.json
+          {
+            "release_tag": "${{ github.event.inputs.release_tag }}",
+            "run_id": ${{ github.run_id }},
+            "workflow_uuid": "${{ github.event.inputs.workflow_uuid }}",
+            "release_type": "${{ github.event.inputs.release_type }}"
+          }
+          RELEASE_HANDLE
+
+      - name: Upload release handle artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release_handle
+          path: result.json
+          retention-days: 90
+
+  # Notify only about build failures
+  # as publish workflow will notify about publish success or failure
+  slack-failure-notification:
+    needs:
+      - prepare-release
+      - build-n-test
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup slack message routing
+        id: slack-routing
+        env:
+          INPUTS_SLACK_CHANNEL_ID: ${{ github.event.inputs.slack_channel_id }}
+          INPUTS_SLACK_THREAD_TS: ${{ github.event.inputs.slack_thread_ts }}
+          INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          VARS_SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+        run: |
+          if [ "$INPUTS_RELEASE_TYPE" == "public" ]; then
+            # For public releases always post notifications to announcement channel
+            echo "slack_channel_id=$VARS_SLACK_CHANNEL_ID" | tee -a "$GITHUB_OUTPUT"
+            # Duplicate slack message links to the requested thread (if any)
+            echo "slack_fanout_msg_links=1" | tee -a "$GITHUB_OUTPUT"
+          elif [ -n "$INPUTS_SLACK_CHANNEL_ID" ]; then
+            echo "slack_channel_id=$INPUTS_SLACK_CHANNEL_ID" | tee -a "$GITHUB_OUTPUT"
+            echo "slack_thread_ts=$INPUTS_SLACK_THREAD_TS" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Failure Slack notification
+        id: slack-failure
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_failure_message
+          slack_channel_id: ${{ steps.slack-routing.outputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          slack_thread_ts: ${{ steps.slack-routing.outputs.slack_thread_ts }}
+          release_tag: ${{ github.event.inputs.release_tag }}
+          env: ${{ needs.prepare-release.outputs.env_name }}
+          message: ":package: Arch Linux package build failed"
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      # Whoever started the release from a Slack thread gets a link to the announcement channel message
+      - name: Post failure notification link to Slack
+        continue-on-error: true
+        if: |
+          steps.slack-routing.outputs.slack_fanout_msg_links == '1' &&
+          github.event.inputs.slack_channel_id != '' &&
+          steps.slack-failure.outputs.slack_url != ''
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_simple_msg
+          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+          message: ${{ steps.slack-failure.outputs.slack_url }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
