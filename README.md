@@ -8,6 +8,36 @@ Experimental packaging of Redis 8 with its bundled modules, derived from the AUR
 This file summarizes the changes and the lessons learned, it is not meant to stay in the package long term.
 
 
+# Installing from the Redis repository
+
+Redis publishes signed builds of this package to its own pacman repositories. `[redis]` carries GA releases. `[redis-testing]` carries release candidates, milestones and internal builds.
+
+Import and locally sign the packaging key:
+
+```sh
+# TODO: replace with the published key URL and fingerprint
+curl -fsSLo redis-packages.asc <KEY_URL>
+sudo pacman-key --add redis-packages.asc
+sudo pacman-key --lsign-key <KEY_FINGERPRINT>
+```
+
+Add one of the repositories to `/etc/pacman.conf`. Packages are signed, the repository database is not, hence `DatabaseOptional`.
+
+```ini
+[redis]
+SigLevel = Required DatabaseOptional
+Server = https://packages.redis.io/arch/$arch
+```
+
+```ini
+[redis-testing]
+SigLevel = Required DatabaseOptional
+Server = https://redis-test-package-repository.s3.us-east-2.amazonaws.com/arch-testing/$arch
+```
+
+Then install with `sudo pacman -Syu redis`.
+
+
 # Highlights
 
 The things I found important while doing this work.
