@@ -1,0 +1,48 @@
+name: "Update Redis version"
+description: "Points the PKGBUILD and .SRCINFO at the release tag"
+
+inputs:
+  release_tag:
+    description: "Release tag to build"
+    required: true
+  release_version_branch:
+    description: "Release version branch to commit to"
+    required: true
+
+outputs:
+  changed_files:
+    description: "List of files that were modified"
+    value: ${{ steps.update-version.outputs.changed_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update PKGBUILD and .SRCINFO
+      id: update-version
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+      run: |
+        docker run --rm -v "$PWD:/work" -w /work archlinux:base-devel \
+          .github/actions/common/as-builder.sh \
+          .github/actions/update-redis-version/update-redis-version.sh "$RELEASE_TAG"
+
+        changed_files=$(git diff --name-only -- PKGBUILD .SRCINFO)
+        if [ -z "$changed_files" ]; then
+          echo "No changes for $RELEASE_TAG"
+        else
+          echo "Updated to $RELEASE_TAG: $changed_files"
+        fi
+        {
+          echo "changed_files<<EOF"
+          echo "$changed_files"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Create verified commit
+      if: steps.update-version.outputs.changed_files != ''
+      uses: iarekylew00t/verified-bot-commit@v2
+      with:
+        message: "Update Redis version to ${{ inputs.release_tag }}"
+        files: ${{ steps.update-version.outputs.changed_files }}
+        ref: ${{ inputs.release_version_branch }}
