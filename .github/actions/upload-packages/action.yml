@@ -1,0 +1,122 @@
+name: "Upload Arch Linux packages to S3"
+description: "Downloads package artifacts, signs them, updates the pacman repository database, and uploads to S3"
+
+inputs:
+  run_id:
+    description: "Run ID to download artifacts from"
+    required: true
+  gh_token:
+    description: "GitHub token"
+    required: true
+  release_type:
+    description: "Type of release (public, internal)"
+    required: true
+  repo_name:
+    description: "pacman repository name"
+    required: true
+  GPG_KEY:
+    description: "GPG signing key"
+    required: true
+  GPG_PASSWORD:
+    description: "GPG password"
+    required: true
+  ARCH_S3_BUCKET:
+    description: "S3 bucket to upload to"
+    required: true
+  ARCH_S3_REGION:
+    description: "S3 region"
+    required: true
+  ARCH_S3_IAM_ARN:
+    description: "IAM role ARN for authentication"
+    required: true
+  ARCH_S3_PREFIX:
+    description: "S3 key prefix of the repository"
+    required: true
+
+outputs:
+  packages_json:
+    description: "JSON structure of uploaded packages"
+    value: ${{ steps.create-json.outputs.packages_json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.run_id }}" ]; then
+          echo "Missing required input: run_id"
+          exit 1
+        fi
+        if [ -z "${{ inputs.ARCH_S3_BUCKET }}" ] || [ -z "${{ inputs.ARCH_S3_REGION }}" ]; then
+          echo "Missing required inputs for S3 bucket and region"
+          exit 1
+        fi
+        if [ -z "${{ inputs.ARCH_S3_IAM_ARN }}" ]; then
+          echo "Missing required input: ARCH_S3_IAM_ARN"
+          exit 1
+        fi
+        # pacman rejects unsigned packages under the SigLevel users are told to set.
+        if [ -z "${{ inputs.GPG_KEY }}" ] || [ -z "${{ inputs.GPG_PASSWORD }}" ]; then
+          echo "::error::GPG key and password are required to sign packages"
+          exit 1
+        fi
+        echo "Will download artifacts from workflow with Run ID: ${{ inputs.run_id }}"
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ inputs.ARCH_S3_IAM_ARN }}
+        aws-region: ${{ inputs.ARCH_S3_REGION }}
+
+    - name: Download package artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: arch-x86_64
+        path: arch-x86_64
+        run-id: ${{ inputs.run_id }}
+        github-token: ${{ inputs.gh_token }}
+
+    - name: Setup GPG key
+      shell: bash
+      env:
+        GPG_KEY: ${{ inputs.GPG_KEY }}
+        GPG_PASSWORD: ${{ inputs.GPG_PASSWORD }}
+      run: |
+        mkdir -m 0700 -p ~/.gnupg
+        echo "$GPG_KEY" | gpg --import --batch
+
+        GPG_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2 | head -n1)
+        echo "GPG_ID=$GPG_ID" | tee -a $GITHUB_ENV
+
+        KEYGRIP=$(gpg --with-keygrip --with-colons --list-secret-keys "$GPG_ID" | awk -F: '/^grp:/ {print $10; exit}')
+        echo "KEYGRIP=$KEYGRIP" | tee -a $GITHUB_ENV
+
+        echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
+        gpg-connect-agent reloadagent /bye
+
+        /usr/lib/gnupg/gpg-preset-passphrase -P "$GPG_PASSWORD" -c "$KEYGRIP"
+
+    - name: Sign packages, update repository and upload
+      shell: bash
+      env:
+        REPO_NAME: ${{ inputs.repo_name }}
+        RELEASE_TYPE: ${{ inputs.release_type }}
+        S3_BUCKET: ${{ inputs.ARCH_S3_BUCKET }}
+        S3_PREFIX: ${{ inputs.ARCH_S3_PREFIX }}
+      run: ${{ github.action_path }}/upload-packages.sh arch-x86_64
+
+    - name: Create packages JSON output
+      id: create-json
+      shell: bash
+      env:
+        REPO_NAME: ${{ inputs.repo_name }}
+      run: |
+        packages_json=$(find arch-x86_64 -name '*.pkg.tar.zst' -printf '%f\n' | sort \
+          | jq -R -s -c --arg repo "$REPO_NAME" '{($repo): {x86_64: split("\n") | map(select(length > 0))}}')
+
+        cat <<OUTPUT | tee -a $GITHUB_OUTPUT
+        packages_json<<EOF
+        $packages_json
+        EOF
+        OUTPUT
