@@ -17,9 +17,9 @@ for package in "${packages[@]}"; do
     --detach-sign --no-armor --output "$package.sig" "$package"
 done
 
-# repo-add runs without secrets; it embeds the .sig files next to each package.
+# repo-add needs pacman tooling but no secrets, so only this step runs in the Arch container.
 docker run --rm --user "$(id -u):$(id -g)" -v "$repo_dir:/repo" -w /repo archlinux:base \
-  repo-add --nocolor --prevent-downgrade "$repo_name.db.tar.gz" "${packages[@]}"
+  repo-add --nocolor "$repo_name.db.tar.gz" "${packages[@]}"
 
 # S3 has no symlinks, so serve real copies under the names pacman requests.
 for kind in db files; do

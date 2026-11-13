@@ -106,8 +106,8 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           release_type: ${{ github.event.inputs.release_type }}
           repo_name: ${{ steps.validate-inputs.outputs.repo_name }}
-          GPG_KEY: ${{ secrets[format('GPG_KEY{0}', steps.validate-inputs.outputs.secret_suffix)] || secrets.GPG_KEY }}
-          GPG_PASSWORD: ${{ secrets[format('GPG_PASSWORD{0}', steps.validate-inputs.outputs.secret_suffix)] || secrets.GPG_PASSWORD }}
+          GPG_KEY: ${{ secrets.GPG_KEY }}
+          GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
           ARCH_S3_BUCKET: ${{ secrets[format('ARCH_S3_BUCKET{0}', steps.validate-inputs.outputs.secret_suffix)] }}
           ARCH_S3_REGION: ${{ secrets[format('ARCH_S3_REGION{0}', steps.validate-inputs.outputs.secret_suffix)] }}
           ARCH_S3_IAM_ARN: ${{ secrets[format('ARCH_S3_IAM_ARN{0}', steps.validate-inputs.outputs.secret_suffix)] }}
