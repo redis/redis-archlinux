@@ -4,6 +4,15 @@ description: "Builds the Arch Linux packages with makepkg and uploads them as an
 runs:
   using: "composite"
   steps:
+    # Present only for tags without a redis-full release archive; a pattern
+    # that matches nothing is not an error, unlike a missing name
+    - name: Download Redis source artifact
+      uses: actions/download-artifact@v7
+      with:
+        pattern: redis-source
+        merge-multiple: true
+        path: .
+
     - name: Build package
       shell: bash
       run: |

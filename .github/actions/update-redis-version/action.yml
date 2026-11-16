@@ -17,6 +17,21 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Fetch Redis source
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+      run: .github/actions/common/fetch-redis-source.sh "$RELEASE_TAG"
+
+    # The build job must use this exact file, since its checksum goes into the PKGBUILD
+    - name: Upload Redis source artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: redis-source
+        path: redis-full-*.tar.gz
+        if-no-files-found: ignore
+        retention-days: 1
+
     - name: Update PKGBUILD and .SRCINFO
       id: update-version
       shell: bash
