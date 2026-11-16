@@ -16,8 +16,12 @@ runs:
     - name: Build package
       shell: bash
       run: |
-        docker run --rm -v "$PWD:/work" -w /work archlinux:base-devel \
-          .github/actions/common/as-builder.sh .github/actions/build/build.sh
+        container=$(docker run --rm --detach -v "$PWD:/work" -w /work archlinux:base-devel sleep infinity)
+        trap 'docker stop --time 0 "$container" >/dev/null' EXIT
+        docker exec "$container" .github/actions/common/as-builder.sh .github/actions/build/prepare-sources.sh
+        # build(), check() and package() must not need the network
+        docker network disconnect bridge "$container"
+        docker exec "$container" .github/actions/common/as-builder.sh .github/actions/build/build.sh
 
     - name: Upload package artifact
       uses: actions/upload-artifact@v7

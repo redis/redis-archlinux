@@ -54,7 +54,7 @@ The bundled jemalloc is used because it carries modifications Redis relies on (a
 
 
 ## Offline build
-prepare() and build() are separated so that the build runs without network access. For this, cargo dependencies are fetched with `--locked` and built through a `cargo --frozen` wrapper, and several search dependencies that CMake would otherwise download are declared as sources. Validated by running `makepkg -os` followed by `makepkg -e` with sealed network.
+prepare() and build() are separated so that the build runs without network access. For this, cargo dependencies are fetched with `--locked` and built through a `cargo --frozen` wrapper, and several search dependencies that CMake would otherwise download are declared as sources. Validated by running `makepkg -os` followed by `makepkg -e` with sealed network. CI builds the package the same way, so a build step that starts to need the network fails.
 
 ## Debug symbols
 Search and json strips debug info, so I have to use unstripped objects to delegate it to makepkg.
