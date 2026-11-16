@@ -30,8 +30,7 @@ fi
 # stop so a person looks at it. updpkgsums is deliberately not used for that
 # reason: it rewrites every checksum from whatever it downloads and would
 # accept the change silently. Only the Redis archive is expected to be new on
-# each release, so only its entry, the first one, is replaced. The dependency
-# sums stay as committed and makepkg fails when one of them no longer matches.
+# each release, so only its entry, the first one, is replaced directly using sed.
 sum=$(sha512sum "$archive" | cut -d' ' -f1)
 sed -i "s/^sha512sums=('[0-9a-f]*'/sha512sums=('$sum'/" PKGBUILD
 if ! grep -q "^sha512sums=('$sum'" PKGBUILD; then
