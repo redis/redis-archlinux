@@ -64,9 +64,9 @@ The license array lists SPDX identifiers that cover the shipped code, the origin
 
 
 ## Module loading
-Module loading is implemented with a `modules.conf` passed in `ExecStart`. This allows seamless upgrades when `redis.conf` has been modified and better reflects the fact that the modules are vendored in by default.
-Passing it through an environment variable in `ExecStart` allows opting out by overriding the variable in a systemd drop-in.
-In addition new `--config-rewrite-source-aware yes` option is used to avoid duplicating configuration when `CONFIG REWRITE` is used.
+The bundled modules are loaded by `loadmodule` directives in the packaged `/etc/redis/redis.conf`, the same way as in the upstream configuration.
+When `redis.conf` has been modified, pacman keeps it and installs the packaged one as `redis.conf.pacnew`. If the kept file has no `loadmodule` directives, the install script prints a note that they have to be merged from the `.pacnew` file to load the modules.
+The `--config-rewrite-source-aware yes` option is passed in `ExecStart`, so that `CONFIG REWRITE` does not duplicate configuration that comes from included files.
 
 ## `/etc/redis` Permissions
 `/etc/redis` is made writable by the service user so that `CONFIG REWRITE` works correctly.
