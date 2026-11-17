@@ -12,10 +12,10 @@ This file summarizes the changes and the lessons learned, it is not meant to sta
 
 Redis publishes signed builds of this package to its own pacman repositories. `[redis]` carries GA releases. `[redis-testing]` carries release candidates, milestones and internal builds.
 
-Import and locally sign the packaging key:
+Import and locally sign the packaging key. `[redis]` and `[redis-testing]` are signed with different keys, so use the key of the repository you add:
 
 ```sh
-# TODO: replace with the published key URL and fingerprint
+# TODO: replace with the published key URL and fingerprint of each repository
 curl -fsSLo redis-packages.asc <KEY_URL>
 sudo pacman-key --add redis-packages.asc
 sudo pacman-key --lsign-key <KEY_FINGERPRINT>
