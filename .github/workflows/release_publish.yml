@@ -3,7 +3,6 @@ name: Release Publish
 # This workflow is part of the Redis OSS release automation process.
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       release_tag:
