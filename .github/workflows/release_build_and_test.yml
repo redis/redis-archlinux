@@ -14,6 +14,28 @@ on:
       release_type:
         description: 'Type of release to upload (public, internal)'
         required: true
+      run_type:
+        description: 'release builds a release tag and prepares it for publishing; unstable, custom and nightly only build and test'
+        required: false
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - unstable
+          - custom
+          - nightly
+      redisearch_version:
+        description: 'RediSearch ref to build instead of the one Redis pins'
+        required: false
+      redisjson_version:
+        description: 'RedisJSON ref to build instead of the one Redis pins'
+        required: false
+      redisbloom_version:
+        description: 'RedisBloom ref to build instead of the one Redis pins'
+        required: false
+      redistimeseries_version:
+        description: 'RedisTimeSeries ref to build instead of the one Redis pins'
+        required: false
       slack_channel_id:
         description: 'Slack channel ID to post notifications to'
         required: false
@@ -43,14 +65,18 @@ jobs:
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
           release_type: ${{ github.event.inputs.release_type }}
+          run_type: ${{ github.event.inputs.run_type }}
 
       - name: Validate Redis Release Archive
+        if: github.event.inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/validate-redis-release-archive@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
 
+      # Only a release commits its recipe, any other run changes it in place
       - name: Ensure Release Branch
         id: ensure-branch
+        if: github.event.inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
@@ -64,12 +90,18 @@ jobs:
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
           release_version_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}
+          run_type: ${{ github.event.inputs.run_type }}
+          redisearch_version: ${{ github.event.inputs.redisearch_version }}
+          redisjson_version: ${{ github.event.inputs.redisjson_version }}
+          redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
+          redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
 
   build-n-test:
     needs: prepare-release
     uses: ./.github/workflows/build-n-test.yml
     with:
-      release_tag: ${{ github.event.inputs.release_tag }}
+      # Only a release has a release version branch to check out
+      release_tag: ${{ github.event.inputs.run_type == 'release' && github.event.inputs.release_tag || '' }}
 
   create-release-handle:
     needs: build-n-test
@@ -83,7 +115,8 @@ jobs:
             "release_tag": "${{ github.event.inputs.release_tag }}",
             "run_id": ${{ github.run_id }},
             "workflow_uuid": "${{ github.event.inputs.workflow_uuid }}",
-            "release_type": "${{ github.event.inputs.release_type }}"
+            "release_type": "${{ github.event.inputs.release_type }}",
+            "run_type": "${{ github.event.inputs.run_type }}"
           }
           RELEASE_HANDLE
 

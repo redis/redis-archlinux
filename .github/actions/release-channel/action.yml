@@ -8,6 +8,10 @@ inputs:
   release_type:
     description: "Type of release (public, internal)"
     required: true
+  run_type:
+    description: "Type of run (release, unstable, custom, nightly)"
+    required: false
+    default: release
 
 outputs:
   repo_name:
@@ -32,5 +36,6 @@ runs:
       env:
         RELEASE_TAG: ${{ inputs.release_tag }}
         RELEASE_TYPE: ${{ inputs.release_type }}
+        RUN_TYPE: ${{ inputs.run_type }}
       run: |
-        ${{ github.action_path }}/release-channel.sh "$RELEASE_TAG" "$RELEASE_TYPE" | tee -a "$GITHUB_OUTPUT"
+        ${{ github.action_path }}/release-channel.sh "$RELEASE_TAG" "$RELEASE_TYPE" "$RUN_TYPE" | tee -a "$GITHUB_OUTPUT"

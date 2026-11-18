@@ -101,6 +101,17 @@ jobs:
           echo "::error::release_handle was built for '${{ steps.parse-handle.outputs.release_tag }}', not '${{ github.event.inputs.release_tag }}'"
           exit 1
 
+      # Only a release was built from a committed recipe. Handles from before
+      # run_type existed have none and are releases.
+      - name: Check release handle run type
+        env:
+          HANDLE_RUN_TYPE: ${{ fromJSON(github.event.inputs.release_handle).run_type }}
+        run: |
+          if [ -n "$HANDLE_RUN_TYPE" ] && [ "$HANDLE_RUN_TYPE" != "release" ]; then
+            echo "::error::release_handle is from a '$HANDLE_RUN_TYPE' run, only release runs are published"
+            exit 1
+          fi
+
       - name: Upload packages
         id: upload
         uses: ./.github/actions/upload-packages
