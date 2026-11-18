@@ -8,12 +8,12 @@ src=${1:?redis source directory required}
 tag=$(sed -n 's/^_tag=//p' PKGBUILD)
 
 search=modules/redisearch/src
-svs=$search/deps/VectorSimilarity/deps/ScalableVectorSearch/cmake
+svs=$search/deps/ScalableVectorSearch/cmake
 git_tag='GIT_TAG[[:space:]]+v?\K[0-9][0-9.]*'
 # PKGBUILD variable, file that declares it, grep -P pattern matching the version
 pins=(
   "_boostver $search/build/boost/boost.cmake boost-\K[0-9.]+(?=/)"
-  "_cpu_featuresver $search/deps/VectorSimilarity/cmake/cpu_features.cmake $git_tag"
+  "_cpu_featuresver $search/src/vecsim/cmake/cpu_features.cmake $git_tag"
   "_evever $svs/eve.cmake $git_tag"
   "_robinmapver $svs/robin-map.cmake $git_tag"
   "_fmtver $svs/fmt.cmake $git_tag"

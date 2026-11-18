@@ -45,8 +45,7 @@ source=("https://github.com/redis/redis/releases/download/${_tag}/redis-full-${_
         redis-smoke-test.sh
         redis-module-flags.mk
         redis-search-linker-flags.cmake
-        redis-cargo-frozen
-        'svs-gcc16-mutex.patch::https://github.com/intel/ScalableVectorSearch/commit/87251338cdc792dc2f1e6f2a58164e7a27f70b6b.patch')
+        redis-cargo-frozen)
 sha512sums=('f79f0b8932599327ee1d88d9db0e4b53b870e36b8f42cd003843fcc14fadae12af3f612be89d81c8abc8d6bcb11d9d83b32a30308642c5eb72a7c70c1e3e90b9'
             'c5e6bd31e6fe9ee7c97d833b9d35fad3dfa3bddb424c8f4b35e1c79c6d3ad231da667ee9c753df789621f5c8b2665816916368d6e95c446fa970a46a2c3cb994'
             '40c314c584fcf109d9a641c055cb75f335fd5425dd336fe831828b956226eaf0ac2fd8ffceeaf10e02afa9cec01cb0ddc6af8ff78f20dd925783e6958d0b9304'
@@ -63,19 +62,15 @@ sha512sums=('f79f0b8932599327ee1d88d9db0e4b53b870e36b8f42cd003843fcc14fadae12af3
             '6a49672c49591ab89aa24bfe50ddd686cfb1c00f0259f235cfd4649212de970e5c82e79a1e815c30731ee35b0e199e0e2df77ed7ab8eaa898593ff3dda90144a'
             '12bb0c6077f0cf0ca32402c0cd627e19e916c137d87a0f8897f8718d195b6087afbb948a61dd5508e8fb10ac7ae3f8d4ccf50b3aca71696723bdbc2cddc95037'
             '63225410ee53b185fcb295240049a8fb7b00f2bcfbbd4e02577bcb2b32136b8a6b2d997bc44977ee9f382d6032d6381210f59abecbabdbdbde0c326e47bea2c0'
-            'a14c884985542b876f715fc1ef1b6d1fff103d8979c0ccff2f523f48677f6d23594b43d5f88a571351dc5eaeefa3a3fc9be3fc48898be57a2160b82250b47bbc'
-            '807f1c5f8a0a5b45616382a2748fb9bd082eb25a9c229ce2f41f66bd574cd11549cc17487c8236c40a70970a20809a855b7f9b5954166052442d9f654d7949a0')
+            'a14c884985542b876f715fc1ef1b6d1fff103d8979c0ccff2f523f48677f6d23594b43d5f88a571351dc5eaeefa3a3fc9be3fc48898be57a2160b82250b47bbc')
 
 prepare() {
   local workspace
   export CARGO_HOME="$srcdir/cargo-home"
   install -Dm755 "$srcdir/redis-cargo-frozen" "$srcdir/redis-build-tools/cargo"
-  # Fix GCC 16 builds until bundled SVS includes upstream #397 (should be fixed in 8.12-rc3)
-  patch -Np1 -d "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch" < \
-    "$srcdir/svs-gcc16-mutex.patch"
   # Local FetchContent overrides bypass upstream's dependency patch step
   patch -Np1 -d "$srcdir/tomlplusplus-$_tomlplusplusver" < \
-    "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/VectorSimilarity/deps/ScalableVectorSearch/cmake/patches/tomlplusplus_v330.patch"
+    "$srcdir/$pkgname-$_tag/modules/redisearch/src/deps/ScalableVectorSearch/cmake/patches/tomlplusplus_v330.patch"
   cd "$pkgname-$_tag"
   patch -Np1 < ../redis.conf-sane-defaults.patch
   # Fetch locked Rust dependencies now so build() can run offline
