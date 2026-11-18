@@ -15,11 +15,14 @@ inputs:
     description: "pacman repository name"
     required: true
   GPG_KEY:
-    description: "GPG signing key"
-    required: true
+    description: "GPG signing key, unused when ARCH_KMS_KEY_ID is set"
+    required: false
   GPG_PASSWORD:
-    description: "GPG password"
-    required: true
+    description: "GPG password, unused when ARCH_KMS_KEY_ID is set"
+    required: false
+  ARCH_KMS_KEY_ID:
+    description: "AWS KMS key that signs the packages instead of the GPG key. Its public key is keys/<repo_name>.asc"
+    required: false
   ARCH_S3_BUCKET:
     description: "S3 bucket to upload to"
     required: true
@@ -57,8 +60,13 @@ runs:
           exit 1
         fi
         # pacman rejects unsigned packages under the SigLevel users are told to set.
-        if [ -z "${{ inputs.GPG_KEY }}" ] || [ -z "${{ inputs.GPG_PASSWORD }}" ]; then
-          echo "::error::GPG key and password are required to sign packages"
+        if [ -n "${{ inputs.ARCH_KMS_KEY_ID }}" ]; then
+          if [ ! -f "keys/${{ inputs.repo_name }}.asc" ]; then
+            echo "::error::keys/${{ inputs.repo_name }}.asc is required to sign with KMS"
+            exit 1
+          fi
+        elif [ -z "${{ inputs.GPG_KEY }}" ] || [ -z "${{ inputs.GPG_PASSWORD }}" ]; then
+          echo "::error::A KMS key, or a GPG key and password, are required to sign packages"
           exit 1
         fi
         echo "Will download artifacts from workflow with Run ID: ${{ inputs.run_id }}"
@@ -78,6 +86,7 @@ runs:
         github-token: ${{ inputs.gh_token }}
 
     - name: Setup GPG key
+      if: inputs.ARCH_KMS_KEY_ID == ''
       shell: bash
       env:
         GPG_KEY: ${{ inputs.GPG_KEY }}
@@ -104,6 +113,8 @@ runs:
         RELEASE_TYPE: ${{ inputs.release_type }}
         S3_BUCKET: ${{ inputs.ARCH_S3_BUCKET }}
         S3_PREFIX: ${{ inputs.ARCH_S3_PREFIX }}
+        KMS_KEY_ID: ${{ inputs.ARCH_KMS_KEY_ID }}
+        KMS_PUBLIC_KEY: keys/${{ inputs.repo_name }}.asc
       run: ${{ github.action_path }}/upload-packages.sh arch-x86_64
 
     - name: Create packages JSON output
