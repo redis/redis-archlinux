@@ -1,14 +1,17 @@
 #!/bin/bash
-# Usage: update-redis-version.sh <release_tag>
+# Usage: update-redis-version.sh <release_tag> [run_type]
 # Runs as a non-root user in an archlinux:base-devel container, from the repo root.
 set -euo pipefail
 
 tag=${1:?release tag required}
-if [[ ! $tag =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-z]+[0-9]*)*$ ]]; then
+run_type=${2:-release}
+# A release is published, so its pkgver must sort correctly in pacman. Any other
+# run builds a branch or tag whose package is never published.
+if [[ $run_type == release && ! $tag =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-z]+[0-9]*)*$ ]]; then
   printf 'Unsupported release tag: %s\n' "$tag" >&2
   exit 1
 fi
-pkgver=${tag//-/}
+pkgver=${tag//[^[:alnum:]._+]/}
 
 current_pkgver=$(sed -n 's/^pkgver=//p' PKGBUILD)
 sed -i -e "s/^pkgver=.*/pkgver=$pkgver/" -e "s/^_tag=.*/_tag=$tag/" PKGBUILD

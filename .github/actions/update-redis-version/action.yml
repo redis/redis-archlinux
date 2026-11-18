@@ -6,8 +6,24 @@ inputs:
     description: "Release tag to build"
     required: true
   release_version_branch:
-    description: "Release version branch to commit to"
-    required: true
+    description: "Release version branch to commit to, unused unless run_type is release"
+    required: false
+  run_type:
+    description: "Type of run (release, unstable, custom, nightly)"
+    required: false
+    default: release
+  redisearch_version:
+    description: "RediSearch ref to build instead of the one Redis pins"
+    required: false
+  redisjson_version:
+    description: "RedisJSON ref to build instead of the one Redis pins"
+    required: false
+  redisbloom_version:
+    description: "RedisBloom ref to build instead of the one Redis pins"
+    required: false
+  redistimeseries_version:
+    description: "RedisTimeSeries ref to build instead of the one Redis pins"
+    required: false
 
 outputs:
   changed_files:
@@ -21,26 +37,22 @@ runs:
       shell: bash
       env:
         RELEASE_TAG: ${{ inputs.release_tag }}
+        REDISEARCH_VERSION: ${{ inputs.redisearch_version }}
+        REDISJSON_VERSION: ${{ inputs.redisjson_version }}
+        REDISBLOOM_VERSION: ${{ inputs.redisbloom_version }}
+        REDISTIMESERIES_VERSION: ${{ inputs.redistimeseries_version }}
       run: .github/actions/common/fetch-redis-source.sh "$RELEASE_TAG"
-
-    # The build job must use this exact file, since its checksum goes into the PKGBUILD
-    - name: Upload Redis source artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: redis-source
-        path: redis-full-*.tar.gz
-        if-no-files-found: ignore
-        retention-days: 1
 
     - name: Update PKGBUILD and .SRCINFO
       id: update-version
       shell: bash
       env:
         RELEASE_TAG: ${{ inputs.release_tag }}
+        RUN_TYPE: ${{ inputs.run_type }}
       run: |
         docker run --rm -v "$PWD:/work" -w /work archlinux:base-devel \
           .github/actions/common/as-builder.sh \
-          .github/actions/update-redis-version/update-redis-version.sh "$RELEASE_TAG"
+          .github/actions/update-redis-version/update-redis-version.sh "$RELEASE_TAG" "$RUN_TYPE"
 
         changed_files=$(git diff --name-only -- PKGBUILD .SRCINFO)
         if [ -z "$changed_files" ]; then
@@ -54,8 +66,20 @@ runs:
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
+    # The build job must use this exact archive, since its checksum is in the
+    # PKGBUILD. Only a release commits the PKGBUILD, any other run hands it over.
+    - name: Upload Redis source artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: redis-source
+        path: |
+          redis-full-*.tar.gz
+          ${{ inputs.run_type != 'release' && 'PKGBUILD' || '' }}
+        if-no-files-found: ignore
+        retention-days: 1
+
     - name: Create verified commit
-      if: steps.update-version.outputs.changed_files != ''
+      if: inputs.run_type == 'release' && steps.update-version.outputs.changed_files != ''
       uses: iarekylew00t/verified-bot-commit@v2
       with:
         message: "Update Redis version to ${{ inputs.release_tag }}"
