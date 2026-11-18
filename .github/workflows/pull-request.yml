@@ -6,6 +6,16 @@ on:
       - master
 
 jobs:
+  validate-recipe:
+    name: Validate checksums and .SRCINFO
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate recipe
+        run: .github/actions/common/validate-recipe.sh
+
   build-and-test:
     name: Build and Test
     uses: ./.github/workflows/build-n-test.yml
