@@ -4,25 +4,38 @@
 set -euo pipefail
 
 package_dir=${1:?package directory required}
-tag=$(sed -n 's/^_tag=//p' PKGBUILD)
-pkgver=${tag//-/}
+
+# The package is the source of its version. The checked out PKGBUILD is not,
+# because unstable, custom and nightly runs build a recipe that is not committed.
+packages=()
+for package in "$package_dir"/redis-*.pkg.tar.zst; do
+  [[ $package == */redis-debug-* ]] || packages+=("$package")
+done
+if (( ${#packages[@]} != 1 )); then
+  printf 'Expected one redis package in %s, found: %s\n' "$package_dir" "${packages[*]}" >&2
+  exit 1
+fi
+package=${packages[0]}
 
 pacman -Syu --noconfirm
-pacman -U --noconfirm "$package_dir"/redis-"$pkgver"-*.pkg.tar.zst
+expected=$(pacman -Qp "$package")
+pacman -U --noconfirm "$package"
 
 installed=$(pacman -Q redis)
 printf 'Installed: %s\n' "$installed"
-if [[ $installed != "redis $pkgver-"* ]]; then
-  printf 'Expected redis %s, got %s\n' "$pkgver" "$installed" >&2
+if [[ $installed != "$expected" ]]; then
+  printf 'Expected %s, got %s\n' "$expected" "$installed" >&2
   exit 1
 fi
 
 server_version=$(redis-server --version)
 printf '%s\n' "$server_version"
 # Pre-releases report an upstream development version (8.12-rc2 is 8.11.241),
-# so only GA tags can be compared to the server's version string.
-if [[ $tag =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $server_version != *" v=$tag "* ]]; then
-  printf 'Expected redis-server v=%s\n' "$tag" >&2
+# so only a GA pkgver can be compared to the server's version string.
+pkgver=${expected#redis }
+pkgver=${pkgver%-*}
+if [[ $pkgver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $server_version != *" v=$pkgver "* ]]; then
+  printf 'Expected redis-server v=%s\n' "$pkgver" >&2
   exit 1
 fi
 
