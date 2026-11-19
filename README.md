@@ -8,6 +8,36 @@ Experimental packaging of Redis 8 with its bundled modules, derived from the AUR
 This file summarizes the changes and the lessons learned, it is not meant to stay in the package long term.
 
 
+# Installing from the Redis repository
+
+Redis publishes signed builds of this package to its own pacman repositories. `[redis]` carries GA releases. `[redis-testing]` carries release candidates, milestones and internal builds.
+
+Import and locally sign the packaging key. `[redis]` and `[redis-testing]` are signed with different keys, so use the key of the repository you add:
+
+```sh
+# TODO: replace with the published key URL and fingerprint of each repository
+curl -fsSLo redis-packages.asc <KEY_URL>
+sudo pacman-key --add redis-packages.asc
+sudo pacman-key --lsign-key <KEY_FINGERPRINT>
+```
+
+Add one of the repositories to `/etc/pacman.conf`. Packages are signed, the repository database is not, hence `DatabaseOptional`.
+
+```ini
+[redis]
+SigLevel = Required DatabaseOptional
+Server = https://packages.redis.io/arch/$arch
+```
+
+```ini
+[redis-testing]
+SigLevel = Required DatabaseOptional
+Server = https://redis-test-package-repository.s3.us-east-2.amazonaws.com/arch-testing/$arch
+```
+
+Then install with `sudo pacman -Syu redis`.
+
+
 # Highlights
 
 The things I found important while doing this work.
@@ -24,7 +54,7 @@ The bundled jemalloc is used because it carries modifications Redis relies on (a
 
 
 ## Offline build
-prepare() and build() are separated so that the build runs without network access. For this, cargo dependencies are fetched with `--locked` and built through a `cargo --frozen` wrapper, and several search dependencies that CMake would otherwise download are declared as sources. Validated by running `makepkg -os` followed by `makepkg -e` with sealed network.
+prepare() and build() are separated so that the build runs without network access. For this, cargo dependencies are fetched with `--locked` and built through a `cargo --frozen` wrapper, and several search dependencies that CMake would otherwise download are declared as sources. Validated by running `makepkg -os` followed by `makepkg -e` with sealed network. CI builds the package the same way, so a build step that starts to need the network fails.
 
 ## Debug symbols
 Search and json strips debug info, so I have to use unstripped objects to delegate it to makepkg.
@@ -34,9 +64,9 @@ The license array lists SPDX identifiers that cover the shipped code, the origin
 
 
 ## Module loading
-Module loading is implemented with a `modules.conf` passed in `ExecStart`. This allows seamless upgrades when `redis.conf` has been modified and better reflects the fact that the modules are vendored in by default.
-Passing it through an environment variable in `ExecStart` allows opting out by overriding the variable in a systemd drop-in.
-In addition new `--config-rewrite-source-aware yes` option is used to avoid duplicating configuration when `CONFIG REWRITE` is used.
+The bundled modules are loaded by `loadmodule` directives in the packaged `/etc/redis/redis.conf`, the same way as in the upstream configuration.
+When `redis.conf` has been modified, pacman keeps it and installs the packaged one as `redis.conf.pacnew`. If the kept file has no `loadmodule` directives, the install script prints a note that they have to be merged from the `.pacnew` file to load the modules.
+The `--config-rewrite-source-aware yes` option is passed in `ExecStart`, so that `CONFIG REWRITE` does not duplicate configuration that comes from included files.
 
 ## `/etc/redis` Permissions
 `/etc/redis` is made writable by the service user so that `CONFIG REWRITE` works correctly.

@@ -10,16 +10,25 @@ _warn_valkey_alias() {
   fi
 }
 
+# pacman keeps a modified redis.conf and writes the packaged one next to it.
+_note_bundled_modules() {
+  local conf=/etc/redis/redis.conf
+  if [[ -f $conf.pacnew ]] &&
+     grep -Eq '^[[:space:]]*loadmodule[[:space:]]' "$conf.pacnew" &&
+     ! grep -Eq '^[[:space:]]*loadmodule[[:space:]]' "$conf"; then
+    echo ""
+    echo "The existing $conf was kept and does not load the bundled modules."
+    echo "To load them, merge the loadmodule directives from $conf.pacnew"
+    echo ""
+  fi
+}
+
 post_install() {
   _warn_valkey_alias
+  _note_bundled_modules
 }
 
 post_upgrade() {
   _warn_valkey_alias
-  if (( $(vercmp "$2" 8.12rc2-3) < 0 )); then
-    echo ""
-    echo "redis.service now loads bundled modules through /usr/lib/redis/modules.conf."
-    echo "In case of duplicate loadmodule errors, remove those directives from redis.conf"
-    echo ""
-  fi
+  _note_bundled_modules
 }

@@ -1,0 +1,39 @@
+name: "Release channel"
+description: "Validates release_tag and release_type and resolves the pacman repository they publish to"
+
+inputs:
+  release_tag:
+    description: "Release tag"
+    required: true
+  release_type:
+    description: "Type of release (public, internal)"
+    required: true
+
+outputs:
+  repo_name:
+    description: "pacman repository name"
+    value: ${{ steps.resolve.outputs.repo_name }}
+  secret_suffix:
+    description: "Suffix of the ARCH_S3_* secrets for this channel"
+    value: ${{ steps.resolve.outputs.secret_suffix }}
+  s3_prefix:
+    description: "S3 key prefix of the repository"
+    value: ${{ steps.resolve.outputs.s3_prefix }}
+  url_prefix:
+    description: "Public URL of the repository"
+    value: ${{ steps.resolve.outputs.url_prefix }}
+  env_name:
+    description: "Packages target environment"
+    value: ${{ steps.resolve.outputs.env_name }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve release channel
+      id: resolve
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+        RELEASE_TYPE: ${{ inputs.release_type }}
+      run: |
+        ${{ github.action_path }}/release-channel.sh "$RELEASE_TAG" "$RELEASE_TYPE" | tee -a "$GITHUB_OUTPUT"

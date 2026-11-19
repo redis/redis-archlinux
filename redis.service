@@ -6,9 +6,8 @@ After=network.target
 Type=notify
 User=redis
 Group=redis
-Environment="REDIS_MODULES_ARG=--include /usr/lib/redis/modules.conf"
 # systemd tracks the main process; no PID file is needed.
-ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd --config-rewrite-source-aware yes --pidfile "" $REDIS_MODULES_ARG
+ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd --config-rewrite-source-aware yes --pidfile ""
 TimeoutStartSec=60
 TimeoutStopSec=60
 # Allow Redis to raise its hard resource limits when needed.

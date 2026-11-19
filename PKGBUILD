@@ -7,8 +7,8 @@
 
 pkgname=redis
 pkgver=8.12rc2
-pkgrel=3
-_tag=${pkgver/rc/-rc}
+pkgrel=4
+_tag=8.12-rc2
 pkgdesc='An in-memory database that persists on disk'
 arch=('x86_64')
 url='https://redis.io/'
@@ -38,7 +38,6 @@ source=("https://github.com/redis/redis/releases/download/${_tag}/redis-full-${_
         "spdlog-${_spdlogver}.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v${_spdlogver}.tar.gz"
         "tomlplusplus-${_tomlplusplusver}.tar.gz::https://github.com/marzer/tomlplusplus/archive/refs/tags/v${_tomlplusplusver}.tar.gz"
         redis.service
-        redis-modules.conf
         redis-sentinel.service
         redis.sysusers
         redis.tmpfiles
@@ -56,8 +55,7 @@ sha512sums=('f79f0b8932599327ee1d88d9db0e4b53b870e36b8f42cd003843fcc14fadae12af3
             'f0da82c545b01692e9fd30fdfb613dbb8dd9716983dcd0ff19ac2a8d36f74beb5540ef38072fdecc1e34191b3682a8542ecbf3a61ef287dbba0a2679d4e023f2'
             '21c35f4091850ea3a0cd6a24867e06e943df70d76cd5a7ec0b15a33e0e9e0cc3584ed7930e1ac6f347e7e06f0e002d0e759884eaf05310014e24ea0e0419fcc4'
             '6ab2de83b7fc44de40e58a47c28a9507bf7c50fa9b08925b5a6d48958868a86e6790aff684d29ceb50ad18905e3832840719e1b7bfec3b8a0c00b15bb0f70f38'
-            'c62e8154efb65429ae87877ac654dd07348340d741a7239750fe9f8b6c7be397c7f43065014d5caf574090d376afce1a3d908abf110f411ec998278d63815f53'
-            '0431b93f8f610ef9b9c12bf708039de86acb2eed24096c8f25f056db6a54471700b26cf086a47d4ffc66341edd3d187c7711c59adbb6ad9617b922a2abd4d598'
+            '1d2f31517cfb89f7d021f6bc83b0e5e35ec76aa6b37d5ba80b86fa8d83a4669167243716d0839a3f07cd60cc0eb75b0de021cd5cb840986d379c57770d6c82f9'
             'fe3b700ba6d46b1a73cc3d8e823388def32aacd4f1a0147bb4140e06f7f08cd8a8e3e17b11d3798d6b49d0e7a25926744875c86a2bf3d061f799e92837ead47b'
             '52a36e44dd0ebfbc75d4849c66fa68cedd8ab0dcdcaaf0e3ac92f1dfe9fbd538a3b98e0658c88295b4c9f61334445f887decbccee210d0b4e7c5b456485599d1'
             '1dccce3fb9c90f8bb5f7e9dab3937a58820e8094694e13b6b5e2ca97cad01d3156c0e8647bc4e2e0a3f28cfd59e8825d9e5ccfffcd78e12451cbbb6d46981777'
@@ -151,9 +149,6 @@ package() {
   make PREFIX=/usr/lib/redis/modules \
        ASSUME_BUILT=1 \
        sync-redis-conf
-  # Remove loadmodule from main conf, we serve modules using modules.conf
-  sed -i '/^[[:space:]]*loadmodule[[:space:]]/d' redis-full.conf
-  install -Dm644 "$srcdir/redis-modules.conf" "$pkgdir/usr/lib/redis/modules.conf"
 
   install -Dm644 LICENSE.txt "$pkgdir"/usr/share/licenses/redis/LICENSE
   install -Dm644 -t "$pkgdir/usr/share/licenses/redis" \

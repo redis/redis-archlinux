@@ -1,0 +1,111 @@
+name: "Send Slack notification"
+description: "Sends Slack notifications for Arch Linux package releases using a bot token"
+
+inputs:
+  slack_func:
+    description: "Slack message format function to use"
+    required: true
+  slack_channel_id:
+    description: "Slack channel ID to post to"
+    required: true
+  slack_thread_ts:
+    description: "Thread timestamp to post message as a reply (optional)"
+    required: false
+  release_tag:
+    description: "Release tag to build"
+    required: false
+  url_prefix:
+    description: "Prefix to add to package URLs"
+    required: false
+  env:
+    description: "Packages target s3 environment"
+    required: false
+  packages_json:
+    description: "JSON structure of uploaded packages by repository and architecture"
+    required: false
+  message:
+    description: "Message to send in case of failure, or the text of a simple message"
+    required: false
+  SLACK_BOT_TOKEN:
+    description: "Slack bot token for API authentication"
+    required: true
+
+outputs:
+  slack_ts:
+    description: "Slack message timestamp"
+    value: ${{ steps.send.outputs.slack_ts }}
+  slack_url:
+    description: "URL to the Slack message"
+    value: ${{ steps.send.outputs.slack_url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout common functions
+      uses: actions/checkout@v6
+      with:
+        repository: redis-developer/redis-oss-release-automation
+        ref: main
+        path: redis-oss-release-automation
+
+    - name: Send Slack notification
+      id: send
+      shell: bash
+      env:
+        SLACK_BOT_TOKEN: ${{ inputs.SLACK_BOT_TOKEN }}
+        INPUTS_SLACK_FUNC: ${{ inputs.slack_func }}
+        INPUTS_SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        INPUTS_SLACK_THREAD_TS: ${{ inputs.slack_thread_ts }}
+        INPUTS_RELEASE_TAG: ${{ inputs.release_tag }}
+        INPUTS_URL_PREFIX: ${{ inputs.url_prefix }}
+        INPUTS_ENV: ${{ inputs.env }}
+        INPUTS_PACKAGES_JSON: ${{ inputs.packages_json }}
+        INPUTS_MESSAGE: ${{ inputs.message }}
+      run: |
+        set -e
+        workflow_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        footer="Repository: ${GITHUB_REPOSITORY} | Commit: \`${GITHUB_SHA}\`"
+
+        . "${GITHUB_ACTION_PATH}/slack_arch.sh"
+
+        msgfile=$(mktemp)
+        case "$INPUTS_SLACK_FUNC" in
+          slack_format_success_message)
+            printf '%s' "$INPUTS_PACKAGES_JSON" | slack_format_success_message \
+              "$INPUTS_SLACK_CHANNEL_ID" "$INPUTS_RELEASE_TAG" "$INPUTS_URL_PREFIX" \
+              "$footer | View: <$workflow_url|workflow run>" "$INPUTS_ENV" "$INPUTS_SLACK_THREAD_TS" \
+              > "$msgfile"
+            ;;
+          slack_format_failure_message)
+            if [ -z "$INPUTS_MESSAGE" ]; then
+              echo "Error: message is required"
+              exit 1
+            fi
+            slack_format_failure_message \
+              "$INPUTS_SLACK_CHANNEL_ID" \
+              "$INPUTS_MESSAGE for Redis: ${INPUTS_RELEASE_TAG:-unknown}${INPUTS_ENV:+ ($INPUTS_ENV)}" \
+              "$workflow_url" "$footer" "$INPUTS_SLACK_THREAD_TS" \
+              > "$msgfile"
+            ;;
+          slack_format_simple_msg)
+            if [ -z "$INPUTS_MESSAGE" ]; then
+              echo "Error: message is required for slack_format_simple_msg"
+              exit 1
+            fi
+            slack_format_simple_msg "$INPUTS_SLACK_CHANNEL_ID" "$INPUTS_MESSAGE" "$INPUTS_SLACK_THREAD_TS" \
+              > "$msgfile"
+            ;;
+          *)
+            echo "Error: Unknown slack_func '$INPUTS_SLACK_FUNC'"
+            exit 1
+            ;;
+        esac
+
+        send_result=$(mktemp)
+        if ! slack_send_with_token "$SLACK_BOT_TOKEN" < "$msgfile" > "$send_result"; then
+          echo "Error sending message:"
+          cat "$msgfile"
+          exit 1
+        fi
+
+        slack_handle_message_result "$INPUTS_SLACK_CHANNEL_ID" "$(cat "$msgfile")" < "$send_result"

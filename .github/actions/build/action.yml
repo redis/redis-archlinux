@@ -1,0 +1,31 @@
+name: "Build package"
+description: "Builds the Arch Linux packages with makepkg and uploads them as an artifact"
+
+runs:
+  using: "composite"
+  steps:
+    # Present only for tags without a redis-full release archive; a pattern
+    # that matches nothing is not an error, unlike a missing name
+    - name: Download Redis source artifact
+      uses: actions/download-artifact@v7
+      with:
+        pattern: redis-source
+        merge-multiple: true
+        path: .
+
+    - name: Build package
+      shell: bash
+      run: |
+        container=$(docker run --rm --detach -v "$PWD:/work" -w /work archlinux:base-devel sleep infinity)
+        trap 'docker stop --time 0 "$container" >/dev/null' EXIT
+        docker exec "$container" .github/actions/common/as-builder.sh .github/actions/build/prepare-sources.sh
+        # build(), check() and package() must not need the network
+        docker network disconnect bridge "$container"
+        docker exec "$container" .github/actions/common/as-builder.sh .github/actions/build/build.sh
+
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: arch-x86_64
+        path: "*.pkg.tar.zst"
+        if-no-files-found: error
