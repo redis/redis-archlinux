@@ -13,9 +13,6 @@ outputs:
   repo_name:
     description: "pacman repository name"
     value: ${{ steps.resolve.outputs.repo_name }}
-  secret_suffix:
-    description: "Suffix of the ARCH_S3_* secrets for this channel"
-    value: ${{ steps.resolve.outputs.secret_suffix }}
   s3_prefix:
     description: "S3 key prefix of the repository"
     value: ${{ steps.resolve.outputs.s3_prefix }}

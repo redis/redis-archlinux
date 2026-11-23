@@ -39,6 +39,9 @@ concurrency:
 jobs:
   upload-packages:
     runs-on: ubuntu-latest
+    # The environment holds the ARCH_* variables of the channel, and it is what
+    # the AWS role trusts, so only the branches it allows can sign and publish.
+    environment: ${{ github.event.inputs.release_type == 'public' && 'production' || 'staging' }}
     permissions:
       # to configure-aws-credentials with a role
       id-token: write
@@ -106,12 +109,12 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           release_type: ${{ github.event.inputs.release_type }}
           repo_name: ${{ steps.validate-inputs.outputs.repo_name }}
-          GPG_KEY: ${{ secrets[format('GPG_KEY{0}', steps.validate-inputs.outputs.secret_suffix)] }}
-          GPG_PASSWORD: ${{ secrets[format('GPG_PASSWORD{0}', steps.validate-inputs.outputs.secret_suffix)] }}
-          ARCH_KMS_KEY_ID: ${{ vars[format('ARCH_KMS_KEY_ID{0}', steps.validate-inputs.outputs.secret_suffix)] }}
-          ARCH_S3_BUCKET: ${{ vars[format('ARCH_S3_BUCKET{0}', steps.validate-inputs.outputs.secret_suffix)] }}
-          ARCH_S3_REGION: ${{ vars[format('ARCH_S3_REGION{0}', steps.validate-inputs.outputs.secret_suffix)] }}
-          ARCH_S3_IAM_ARN: ${{ vars[format('ARCH_S3_IAM_ARN{0}', steps.validate-inputs.outputs.secret_suffix)] }}
+          GPG_KEY: ${{ secrets.GPG_KEY }}
+          GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
+          ARCH_KMS_KEY_ID: ${{ vars.ARCH_KMS_KEY_ID }}
+          ARCH_S3_BUCKET: ${{ vars.ARCH_S3_BUCKET }}
+          ARCH_S3_REGION: ${{ vars.ARCH_S3_REGION }}
+          ARCH_S3_IAM_ARN: ${{ vars.ARCH_S3_IAM_ARN }}
           ARCH_S3_PREFIX: ${{ steps.validate-inputs.outputs.s3_prefix }}
 
       - name: Merge back to release branch

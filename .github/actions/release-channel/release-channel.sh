@@ -9,14 +9,12 @@ release_type=${2:?release type required}
 case $release_type in
   public)
     repo_name=redis
-    secret_suffix=
     s3_prefix=arch
     url_prefix=https://packages.redis.io/arch
     env_name=production
     ;;
   internal)
     repo_name=redis-testing
-    secret_suffix=_STAGING
     s3_prefix=arch-testing
     url_prefix=https://redis-test-package-repository.s3.us-east-2.amazonaws.com/arch-testing
     env_name=staging
@@ -35,7 +33,6 @@ fi
 
 printf '%s=%s\n' \
   repo_name "$repo_name" \
-  secret_suffix "$secret_suffix" \
   s3_prefix "$s3_prefix" \
   url_prefix "$url_prefix" \
   env_name "$env_name"
