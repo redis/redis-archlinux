@@ -21,7 +21,11 @@ BINARY_DOCUMENT = 0x00
 
 
 def run(*command: str) -> str:
-    return subprocess.run(command, check=True, capture_output=True, text=True).stdout.strip()
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode:
+        # The reason, access denied or a missing key, is only in the command's stderr
+        sys.exit(f"{' '.join(command)} failed: {result.stderr.strip()}")
+    return result.stdout.strip()
 
 
 def kms_modulus(key_id: str) -> int:
